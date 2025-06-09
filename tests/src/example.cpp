@@ -4,30 +4,32 @@ struct Interface1 {
     virtual ~Interface1() = default;
 };
 
-struct Type1 : Interface1 {};
-
 struct Interface2 {
     virtual ~Interface2() = default;
-};
-LIANT_DEPENDENCY(Interface2, interfaceTwo)
-
-struct Type2 : Interface2 {
-    Type2(liant::Dependencies<Interface1> di)
-        : di(di) {}
-
-    liant::Dependencies<Interface1> di;
 };
 
 struct Interface3 {
     virtual ~Interface3() = default;
 };
+
+LIANT_DEPENDENCY(Interface2, interfaceTwo)
 LIANT_DEPENDENCY(Interface3, interfaceThree)
 
-struct Type3 : Interface3 {
-    Type3(liant::Dependencies<Interface2, Interface1> di)
+
+struct Type1 : Interface1 {};
+
+struct Type2 : Interface2 {
+    Type2(liant::Dependencies<Interface3> di)
         : di(di) {}
 
-    liant::Dependencies<Interface2, Interface1> di;
+    liant::Dependencies<Interface3> di;
+};
+
+struct Type3 : Interface3 {
+    Type3(liant::Dependencies<Interface1> di)
+        : di(di) {}
+
+    liant::Dependencies<Interface1> di;
 };
 
 
@@ -38,14 +40,20 @@ int main() {
     auto container = liant::makeContainer(
         liant::missing_dependency_policy::Terminate,
         liant::registerType<Type1>().as<Interface1>(),
-        liant::registerType<Type4>(),
+        // liant::registerType<Type4>(),
         liant::registerType<Type2>().as<Interface2>(),
-        liant::registerType<Type3>().as<Interface3>());
+        liant::registerType<Type3>().as<Interface3>()
+    );
     // clang-format on
 
-    container->create<Interface1>();
-    container->create<Interface2>();
-    container->create<Interface3>();
+    using ContainerType = decltype(container);
+    // container->create<Interface1>();
+    // container->create<Interface2>();
+    // container->create<Type4>();
+    // container->resolve<Type4>();
+    container->find<Interface1>();
 
-    Interface1* interface = container->resolve<Interface1>();
+    container->createAll();
+
+    // Interface1* interface = container->resolve<Interface1>();
 }

@@ -18,7 +18,7 @@ struct TerminatePolicy {
     using IsPolicy = void;
 
     template <typename TInterface, typename TContainer>
-    TInterface& handleMissingInstance(TContainer&) const {
+    TInterface& handleMissingItem(TContainer&) const {
         std::terminate();
     }
 };
@@ -27,7 +27,7 @@ struct ThrowPolicy {
     using IsPolicy = void;
 
     template <typename TInterface, typename TContainer>
-    TInterface& handleMissingInstance(TContainer&) const {
+    TInterface& handleMissingItem(TContainer&) const {
         throw std::runtime_error("missing dependency");
     }
 };
@@ -40,7 +40,7 @@ struct HandlerPolicy {
         : callback(callback) {}
 
     template <typename TInterface, typename TContainer>
-    TInterface& handleMissingInstance(TContainer& container) const {
+    TInterface& handleMissingItem(TContainer& container) const {
         return callback.template operator()<TInterface, TContainer>(container);
     }
 

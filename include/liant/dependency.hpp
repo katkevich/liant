@@ -1,5 +1,6 @@
 #pragma once
 #include "liant/container.hpp"
+#include "liant/typelist.hpp"
 
 namespace liant {
 
@@ -19,9 +20,11 @@ class Dependency {
 template <typename... TTypes>
 class Dependencies : public Dependency<TTypes>... {
 public:
+    using Interfaces = TypeList<TTypes...>;
+
     template <typename... UTypeMappings>
     Dependencies(Container<UTypeMappings...>& container)
-        : Dependency<TTypes>{ container.template resolveChecked<TTypes>() }... {}
+        : Dependency<TTypes>{ container.template findChecked<TTypes>() }... {}
 
     template <typename TType>
     auto& get() {
