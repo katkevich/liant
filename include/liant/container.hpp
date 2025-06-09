@@ -15,7 +15,7 @@ enum class ItemLifetime { External, DI };
 
 template <ItemLifetime LifetimeV, typename T, typename... TInterfaces>
 struct TypeMapping {
-    static_assert((std::is_base_of_v<TInterfaces, T> && ...), "type T must be derived from each of the TInterfaces");
+    static_assert((std::is_base_of_v<TInterfaces, T> && ...), "Type T must be derived from each of the TInterfaces");
 
     using Type = T;
     using Interfaces = TypeList<TInterfaces...>;
@@ -122,11 +122,12 @@ public:
     }
 
     // create an instance of type registered as 'TInterface'
+    // all dependencies will be created automatically, cycles are detected automatically
     // if such instance already exists then just return it statically casted to 'TInterface'
     template <typename TInterface, typename... TArgs>
     TInterface& create(TArgs&&... args) {
         auto& item = findItemOf<TInterface>();
-        return instantiate(TypeIdentity<TInterface>{}, item, std::forward<TArgs>(args)...);
+        return instantiateOne<TInterface>(item, TypeList<>{}, std::forward<TArgs>(args)...);
     }
 
     // create all registered instances automatically
@@ -141,19 +142,6 @@ public:
     }
 
 private:
-    template <typename TInterface, typename TRegisteredItem, typename... TArgs>
-    TInterface& instantiate(TypeIdentity<TInterface>, TRegisteredItem& item, TArgs&&... args) {
-        if (TInterface* existingInterface = item.template get<TInterface>()) {
-            return *existingInterface;
-        } else {
-            TInterface& interface = item.template instantiate<TInterface>(*this, std::forward<TArgs>(args)...);
-            // order matters coz 'item.instantiate<TInterface>' may recursisevly instantiate its own dependencies (see 'instantiateAll' mechanism)
-            deleters.push_back(makeDeleter<TInterface>());
-
-            return interface;
-        }
-    }
-
     template <typename TDependenciesChain>
     struct DependenciesCtorHook {
         template <typename... TInterfaces>
@@ -167,29 +155,48 @@ private:
 
     // TDependenciesChain is there to detect dependencies cycles at compile time
     template <typename TDependenciesChain, typename... TInterfaces>
-    void instantiateAll(TypeList<TInterfaces...>, TDependenciesChain) {
-        TypeList<TInterfaces...>::template forEach([&]<typename TInterface>() {
-            static_assert(!TDependenciesChain::template contains<TInterface>(), "detected cycle in you dependencies");
-            using DependenciesChainNext = TypeListAppendT<TDependenciesChain, TInterface>;
-
-            auto& item = findItemOf<TInterface>();
-            using Item = std::remove_reference_t<decltype(item)>;
-
-            if constexpr (Item::Mapping::Lifetime == ItemLifetime::DI) {
-                if constexpr (std::is_constructible_v<typename Item::Mapping::Type, Container&>) {
-                    // hook into dependencies creation logic and ensure dependencies of those dependencies are created first
-                    DependenciesCtorHook<DependenciesChainNext> dependenciesCtorHook{ *this };
-                    item.template instantiate<TInterface>(dependenciesCtorHook);
-                } else if constexpr (std::is_default_constructible_v<typename Item::Mapping::Type>) {
-                    // item depends on nothing (it is a leaf of a dependencies tree) so it can be created right away
-                    item.template instantiate<TInterface>(*this);
-                } else {
-                    static_assert(AlwaysFalsePrint<typename Item::Mapping::Type>,
-                        "type you've registered within DI container doesn't have default ctor or ctor which accepts "
-                        "only liant::Dependencies<...>");
-                }
-            }
+    void instantiateAll(TypeList<TInterfaces...>, TDependenciesChain dependenciesChain) {
+        TypeList<TInterfaces...>::template forEach([&]<typename TInterface>() { //
+            instantiateOne<TInterface>(findItemOf<TInterface>(), dependenciesChain);
         });
+    }
+
+    template <typename TInterface, typename TRegisteredItem, typename TDependenciesChain, typename... TArgs>
+    TInterface& instantiateOne(TRegisteredItem& item, TDependenciesChain, TArgs&&... args) {
+        static_assert(!TDependenciesChain::template contains<TInterface>(), "Detected cycle in your dependencies");
+        using DependenciesChainNext = TypeListAppendT<TDependenciesChain, TInterface>;
+
+        if constexpr (TRegisteredItem::Mapping::Lifetime == ItemLifetime::DI) {
+            if constexpr (std::is_constructible_v<typename TRegisteredItem::Mapping::Type, Container&, TArgs&&...>) {
+                // hook into dependencies creation logic and ensure dependencies of those dependencies are created first
+                DependenciesCtorHook<DependenciesChainNext> dependenciesCtorHook{ *this };
+                return item.template instantiate<TInterface>(dependenciesCtorHook, std::forward<TArgs>(args)...);
+            } else if constexpr (std::is_constructible_v<typename TRegisteredItem::Mapping::Type, TArgs&&...>) {
+                // item depends on nothing from DI container (it is a leaf of a dependencies tree) so it can be created right away
+                return item.template instantiate<TInterface>(*this, std::forward<TArgs>(args)...);
+            } else {
+                static_assert(AlwaysFalsePrint<typename TRegisteredItem::Mapping::Type>,
+                    "Cannot create an instance of a type you've registered within DI container. "
+                    "Either you've called 'Container::createAll' but one of the dependencies requires some extra ctor "
+                    "arguments or you've called 'Container::create' and provided wrong ctor arguments");
+            }
+        } else {
+            // External items are always initialized
+            return item.template get<TInterface>();
+        }
+    }
+
+    template <typename TInterface, typename TRegisteredItem, typename... TArgs>
+    TInterface& instantiate(TypeIdentity<TInterface>, TRegisteredItem& item, TArgs&&... args) {
+        if (TInterface* existingInterface = item.template get<TInterface>()) {
+            return *existingInterface;
+        } else {
+            TInterface& interface = item.template instantiate<TInterface>(*this, std::forward<TArgs>(args)...);
+            // order matters coz 'item.instantiate<TInterface>' may recursisevly instantiate its own dependencies (see 'instantiateAll' mechanism)
+            deleters.push_back(makeDeleter<TInterface>());
+
+            return interface;
+        }
     }
 
     template <typename TInterface>
@@ -201,7 +208,7 @@ private:
         });
 
         static_assert(ConditionalPrint<itemIndex != -1, TInterface>,
-            "you're trying to create or resolve an interface which isn't registered within DI container");
+            "You're trying to create or resolve an interface which isn't registered within DI container");
 
         return std::get<static_cast<std::size_t>(itemIndex)>(items);
     }
@@ -223,7 +230,7 @@ private:
 template <typename TMissingDependencyPolicy, typename... TTypeMappings>
 auto makeContainer(TMissingDependencyPolicy missingDependencyPolicy, RegisteredItem<TTypeMappings>... items) {
     static_assert(liant::missing_dependency_policy::is_policy_v<TMissingDependencyPolicy>,
-        "first argument to liant::makeContainer(...) should be Missing Dependency Policy\nexpecting something like:\n"
+        "First argument to liant::makeContainer(...) should be Missing Dependency Policy.\nExpecting something like:\n"
         "liant::makeContainer(liant::missing_dependency_policy::Terminate, ...)\n"
         "                     ^ here we are using 'terminate' policy\n");
     return std::make_shared<liant::Container<TMissingDependencyPolicy, TTypeMappings...>>(missingDependencyPolicy, items...);

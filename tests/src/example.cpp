@@ -53,7 +53,8 @@ int main() {
     // container->resolve<Type4>();
     container->find<Interface1>();
 
-    container->createAll();
+    container->create<Interface3>();
+    // container->createAll();
 
     // Interface1* interface = container->resolve<Interface1>();
 }
