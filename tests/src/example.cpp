@@ -1,4 +1,5 @@
 #include "liant/liant.hpp"
+#include <iostream>
 
 struct Interface1 {
     virtual ~Interface1() = default;
@@ -19,10 +20,13 @@ LIANT_DEPENDENCY(Interface3, interfaceThree)
 struct Type1 : Interface1 {};
 
 struct Type2 : Interface2 {
-    Type2(liant::Dependencies<Interface3> di)
-        : di(di) {}
+    Type2(liant::Dependencies<Interface3> di, std::string s)
+        : di(di)
+        , s(s) {}
 
     liant::Dependencies<Interface3> di;
+
+    std::string s;
 };
 
 struct Type3 : Interface3 {
@@ -41,7 +45,7 @@ int main() {
         liant::missing_dependency_policy::Terminate,
         liant::registerType<Type1>().as<Interface1>(),
         // liant::registerType<Type4>(),
-        liant::registerType<Type2>().as<Interface2>(),
+        liant::registerType<Type2>().as<Interface2>().bindArgs("hello, world"),
         liant::registerType<Type3>().as<Interface3>()
     );
     // clang-format on
@@ -53,8 +57,16 @@ int main() {
     // container->resolve<Type4>();
     container->find<Interface1>();
 
-    container->create<Interface3>();
-    // container->createAll();
+    // container->create<Interface3>();
+    container->createAll();
+
+
+    Interface2* i2 = container->find<Interface2>();
+
+    std::cout << static_cast<Type2*>(i2)->s << std::endl;
+
+    return static_cast<Type2*>(i2)->s == "hello, world";
+
 
     // Interface1* interface = container->resolve<Interface1>();
 }
