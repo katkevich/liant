@@ -1,5 +1,4 @@
 #pragma once
-#include "liant/missing_dependency_policy.hpp"
 #include "liant/tuple.hpp"
 #include "liant/typelist.hpp"
 
@@ -67,7 +66,7 @@ public:
     }
 
 private:
-    template <typename TMissingDependencyPolicy, typename... TTypeMappings>
+    template <typename... TTypeMappings>
     friend class Container;
 
     template <typename TInterface>
@@ -113,14 +112,13 @@ public:
     virtual ~ContainerBase() = default;
 };
 
-template <typename TMissingDependencyPolicy, typename... TTypeMappings>
+template <typename... TTypeMappings>
 class Container : public ContainerBase {
     using DestroyItemFn = void (*)(Container&);
 
 public:
-    Container(TMissingDependencyPolicy missingDependencyPolicy, RegisteredItem<TTypeMappings>... items)
-        : items{ items... }
-        , missingDependencyPolicy(missingDependencyPolicy) {
+    Container(RegisteredItem<TTypeMappings>... items)
+        : items{ items... } {
         deleters.reserve(sizeof...(TTypeMappings));
     }
     ~Container() {
@@ -130,42 +128,31 @@ public:
         }
     }
 
-    // trying to find already created 'TInterface' instance
+    // trying to find already created instance registered 'as TInterface'
     template <typename TInterface>
     TInterface* find() {
-        auto& item = findItemOf<TInterface>();
+        auto& item = findItem<TInterface>();
 
         return item.template get<TInterface>();
     }
 
-    // trying to find already created 'TInterface' instance
-    // if haven't found then MissingDependencyPolicy kicks in (terminate or throw or custom handler)
-    template <typename TInterface>
-    TInterface& findChecked() {
-        auto& item = findItemOf<TInterface>();
-
-        if (TInterface* interface = item.template get<TInterface>()) {
-            return *interface;
-        } else {
-            return missingDependencyPolicy.template handleMissingItem<TInterface>(*this);
-        }
-    }
-
-    // create an instance of type registered as 'TInterface'
+    // resolve an instance of type registered 'as TInterface'
     // all dependencies will be created automatically, cycles are detected automatically
-    // if such instance already exists then just return it statically casted to 'TInterface'
+    // if such instance already exists then just return it, statically casted to 'TInterface'
     template <typename TInterface, typename... TArgs>
-    TInterface& create(TArgs&&... args) {
-        auto& item = findItemOf<TInterface>();
+    TInterface& resolve(TArgs&&... args) {
+        auto& item = findItem<TInterface>();
         return instantiateOne<TInterface>(item, TypeList<>{}, std::forward<TArgs>(args)...);
     }
 
-    // create all registered instances automatically
+    // resolve all registered instances automatically
     // order is determined automatically, cycles are detected automatically
     // note: your types should satisfy some preconditions:
-    // - registered type should be default-constructible, or
-    // - registered type should be constructible from 'Dependencies<...>'
-    void createAll() {
+    // - registered type should be default-constructible
+    // - or registered type should be only constructible from 'Dependencies<...>'
+    // - or you should provide ctor arguments while calling 'Container::resolve<...>'
+    // - or you should provide ctor arguments bindings while configuring DI mappings (bindArgs(...))
+    void resolveAll() {
         liant::tuple::forEach(items, [&]<typename TTypeMapping>(RegisteredItem<TTypeMapping>&) {
             instantiateAll(typename TTypeMapping::Interfaces{}, TypeList<>{});
         });
@@ -187,7 +174,7 @@ private:
     template <typename TDependenciesChain, typename... TInterfaces>
     void instantiateAll(TypeList<TInterfaces...>, TDependenciesChain dependenciesChain) {
         TypeList<TInterfaces...>::template forEach([&]<typename TInterface>() { //
-            instantiateOne<TInterface>(findItemOf<TInterface>(), dependenciesChain);
+            instantiateOne<TInterface>(findItem<TInterface>(), dependenciesChain);
         });
     }
 
@@ -202,7 +189,7 @@ private:
         using DependenciesChainNext = TypeListAppendT<TDependenciesChain, TInterface>;
 
         if constexpr (TRegisteredItem::Mapping::Lifetime == ItemLifetime::DI) {
-            // use directly provided ctor arguments instead of binded ones
+            // use directly provided ctor arguments instead of the binded ones
             if constexpr (sizeof...(TArgs) > 0) {
                 if constexpr (std::is_constructible_v<typename TRegisteredItem::Mapping::Type, Container&, TArgs&&...>) {
                     // hook into dependencies creation logic and ensure dependencies of those dependencies are created first
@@ -257,7 +244,7 @@ private:
     }
 
     template <typename TInterface>
-    auto& findItemOf() {
+    auto& findItem() {
         using RegisteredItemsTypeList = TypeList<RegisteredItem<TTypeMappings>...>;
 
         constexpr std::ptrdiff_t itemIndex = RegisteredItemsTypeList::find([]<typename TRegisteredItem>() {
@@ -273,23 +260,18 @@ private:
     template <typename TInterface>
     DestroyItemFn makeDeleter() {
         return +[](Container& self) {
-            auto& item = self.findItemOf<TInterface>();
+            auto& item = self.findItem<TInterface>();
             item.destroy();
         };
     }
 
 private:
     std::tuple<RegisteredItem<TTypeMappings>...> items;
-    TMissingDependencyPolicy missingDependencyPolicy;
     std::vector<DestroyItemFn> deleters;
 };
 
-template <typename TMissingDependencyPolicy, typename... TTypeMappings>
-auto makeContainer(TMissingDependencyPolicy missingDependencyPolicy, RegisteredItem<TTypeMappings>... items) {
-    static_assert(liant::missing_dependency_policy::is_policy_v<TMissingDependencyPolicy>,
-        "First argument to liant::makeContainer(...) should be Missing Dependency Policy.\nExpecting something like:\n"
-        "liant::makeContainer(liant::missing_dependency_policy::Terminate, ...)\n"
-        "                     ^ here we are using 'terminate' policy\n");
-    return std::make_shared<liant::Container<TMissingDependencyPolicy, TTypeMappings...>>(missingDependencyPolicy, items...);
+template <typename... TTypeMappings>
+auto makeContainer(RegisteredItem<TTypeMappings>... items) {
+    return std::make_shared<liant::Container<TTypeMappings...>>(items...);
 }
 } // namespace liant

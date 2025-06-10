@@ -38,13 +38,13 @@ struct Type3 : Interface3 {
 
 
 struct Type4 {};
+struct Type5 {};
 
 int main() {
     // clang-format off
     auto container = liant::makeContainer(
-        liant::missing_dependency_policy::Terminate,
         liant::registerType<Type1>().as<Interface1>(),
-        // liant::registerType<Type4>(),
+        liant::registerType<Type4>(),
         liant::registerType<Type2>().as<Interface2>().bindArgs("hello, world"),
         liant::registerType<Type3>().as<Interface3>()
     );
@@ -57,8 +57,9 @@ int main() {
     // container->resolve<Type4>();
     container->find<Interface1>();
 
-    // container->create<Interface3>();
-    container->createAll();
+    container->resolve<Interface2>("blah blah");
+    container->resolve<Interface3>();
+    container->resolveAll();
 
 
     Interface2* i2 = container->find<Interface2>();

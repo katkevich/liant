@@ -24,7 +24,7 @@ public:
 
     template <typename... UTypeMappings>
     Dependencies(Container<UTypeMappings...>& container)
-        : Dependency<TTypes>{ container.template findChecked<TTypes>() }... {}
+        : Dependency<TTypes>{ container.template resolve<TTypes>() }... {}
 
     template <typename TType>
     auto& get() {
