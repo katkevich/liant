@@ -2,7 +2,6 @@
 #include "liant/tuple.hpp"
 #include "liant/typelist.hpp"
 
-#include <cassert>
 #include <functional>
 #include <memory>
 #include <tuple>
@@ -82,10 +81,18 @@ private:
         } else {
             item = new TTypeMapping::Type(std::forward<TArgs>(args)...);
         }
+
+        if constexpr (requires { item->postCreate(); }) {
+            item->postCreate();
+        }
+
         return static_cast<TInterface&>(*item);
     }
 
     void destroy() {
+        if constexpr (requires { item->preDestroy(); }) {
+            item->preDestroy();
+        }
         delete item;
     }
 
@@ -194,10 +201,10 @@ private:
                 if constexpr (std::is_constructible_v<typename TRegisteredItem::Mapping::Type, Container&, TArgs&&...>) {
                     // hook into dependencies creation logic and ensure dependencies of those dependencies are created first
                     DependenciesCtorHook<DependenciesChainNext> dependenciesCtorHook{ *this };
-                    return item.template instantiate<TInterface>(dependenciesCtorHook, std::forward<TArgs>(args)...);
+                    return instantiate<TInterface>(item, dependenciesCtorHook, std::forward<TArgs>(args)...);
                 } else if constexpr (std::is_constructible_v<typename TRegisteredItem::Mapping::Type, TArgs&&...>) {
                     // item depends on nothing from DI container (it is a leaf of a dependencies tree) so it can be created right away
-                    return item.template instantiate<TInterface>(*this, std::forward<TArgs>(args)...);
+                    return instantiate<TInterface>(item, *this, std::forward<TArgs>(args)...);
                 } else {
                     static_assert(AlwaysFalsePrint<typename TRegisteredItem::Mapping::Type>,
                         "Cannot create an instance of a type you've registered within DI container. "
@@ -212,10 +219,10 @@ private:
                         if constexpr (std::is_constructible_v<typename TRegisteredItem::Mapping::Type, Container&, UArgs&&...>) {
                             // hook into dependencies creation logic and ensure dependencies of those dependencies are created first
                             DependenciesCtorHook<DependenciesChainNext> dependenciesCtorHook{ *this };
-                            return item.template instantiate<TInterface>(dependenciesCtorHook, std::forward<UArgs>(args)...);
+                            return instantiate<TInterface>(item, dependenciesCtorHook, std::forward<UArgs>(args)...);
                         } else if constexpr (std::is_constructible_v<typename TRegisteredItem::Mapping::Type, UArgs&&...>) {
                             // item depends on nothing from DI container (it is a leaf of a dependencies tree) so it can be created right away
-                            return item.template instantiate<TInterface>(*this, std::forward<UArgs>(args)...);
+                            return instantiate<TInterface>(item, *this, std::forward<UArgs>(args)...);
                         } else {
                             static_assert(AlwaysFalsePrint<typename TRegisteredItem::Mapping::Type>,
                                 "Cannot create an instance of a type you've registered within DI container. "
@@ -231,12 +238,10 @@ private:
         }
     }
 
-    template <typename TInterface, typename TRegisteredItem, typename... TArgs>
-    TInterface& instantiate(TypeIdentity<TInterface>, TRegisteredItem& item, TArgs&&... args) {
-        // item can only be instantiated once
-        assert(!item.template get<TInterface>());
-
-        TInterface& interface = item.template instantiate<TInterface>(*this, std::forward<TArgs>(args)...);
+    // TDependenciesHolder may be either 'Container<...>' itself or 'Container<...>::DependenciesCtorHook'
+    template <typename TInterface, typename TRegisteredItem, typename TDependenciesHolder, typename... TArgs>
+    TInterface& instantiate(TRegisteredItem& item, TDependenciesHolder& dependenciesHolder, TArgs&&... args) {
+        TInterface& interface = item.template instantiate<TInterface>(dependenciesHolder, std::forward<TArgs>(args)...);
         // order matters coz 'item.instantiate<TInterface>' may recursisevly instantiate its own dependencies (see 'instantiateAll' mechanism)
         deleters.push_back(makeDeleter<TInterface>());
 

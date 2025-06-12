@@ -17,7 +17,14 @@ LIANT_DEPENDENCY(Interface2, interfaceTwo)
 LIANT_DEPENDENCY(Interface3, interfaceThree)
 
 
-struct Type1 : Interface1 {};
+struct Type1 : Interface1 {
+    void postCreate() const {
+        std::cout << "type1 postCreate\n";
+    }
+    void preDestroy() const {
+        std::cout << "type1 preDestroy\n";
+    }
+};
 
 struct Type2 : Interface2 {
     Type2(liant::Dependencies<Interface3> di, std::string s)
@@ -27,6 +34,13 @@ struct Type2 : Interface2 {
     liant::Dependencies<Interface3> di;
 
     std::string s;
+
+    void postCreate() const {
+        std::cout << "type2 postCreate\n";
+    }
+    void preDestroy() const {
+        std::cout << "type2 preDestroy\n";
+    }
 };
 
 struct Type3 : Interface3 {
@@ -34,10 +48,24 @@ struct Type3 : Interface3 {
         : di(di) {}
 
     liant::Dependencies<Interface1> di;
+
+    // void postCreate() const {
+    //     std::cout << "type3 postCreate\n";
+    // }
+    // void preDestroy() const {
+    //     std::cout << "type3 preDestroy\n";
+    // }
 };
 
 
-struct Type4 {};
+struct Type4 {
+    void postCreate() const {
+        std::cout << "type4 postCreate\n";
+    }
+    void preDestroy() const {
+        std::cout << "type4 preDestroy\n";
+    }
+};
 struct Type5 {};
 
 int main() {
