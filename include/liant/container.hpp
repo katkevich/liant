@@ -3,6 +3,7 @@
 #include "liant/tuple.hpp"
 #include "liant/typelist.hpp"
 
+#include <concepts>
 #include <functional>
 #include <memory>
 #include <tuple>
@@ -33,7 +34,9 @@ class RegisteredItem {
 public:
     using Mapping = TTypeMapping;
 
-    RegisteredItem() = default;
+    RegisteredItem()
+        requires std::default_initializable<typename TTypeMapping::CtorArgsTuple>
+    = default;
 
     template <typename... TCtorArgs>
     RegisteredItem(typename TTypeMapping::Type* item, TCtorArgs&&... ctorArgs)
@@ -99,7 +102,7 @@ private:
 
 private:
     TTypeMapping::Type* item{};
-    TTypeMapping::CtorArgsTuple ctorArgs{};
+    TTypeMapping::CtorArgsTuple ctorArgs;
 };
 
 template <typename T>
@@ -126,7 +129,7 @@ public:
     }
 
     template <typename TInterface, typename TDependenciesChain, typename... TArgs>
-    TInterface& resolveInternal(TArgs&&... args) {
+    TInterface& resolveInternal(TArgs&&...) {
         static_assert(liant::Print<TInterface>,
             "You're trying to create or resolve an interface which isn't registered within DI container "
             "(search 'liant::Print' in the compilation output for details)");
