@@ -17,7 +17,7 @@ class SharedRef {
     template <typename U>
     friend class WeakPtr;
 
-    SharedRef(T& ref, std::shared_ptr<ContainerBase> owner)
+    SharedRef(T& ref, std::shared_ptr<const ContainerBase> owner)
         : ptr(std::addressof(ref))
         , owner(std::move(owner)) {}
 
@@ -66,8 +66,8 @@ public:
     }
 
 private:
-    T* ptr{};                               // never nullptr
-    std::shared_ptr<ContainerBase> owner{}; // never nullptr
+    T* ptr{};                                     // never nullptr
+    std::shared_ptr<const ContainerBase> owner{}; // never nullptr
 };
 
 
@@ -83,7 +83,7 @@ class SharedPtr {
     template <typename U>
     friend class WeakPtr;
 
-    SharedPtr(T* ptr, std::shared_ptr<ContainerBase> owner)
+    SharedPtr(T* ptr, std::shared_ptr<const ContainerBase> owner)
         : ptr(ptr)
         , owner(ptr ? std::move(owner) : nullptr) {}
 
@@ -145,7 +145,7 @@ public:
 
 private:
     T* ptr{};
-    std::shared_ptr<ContainerBase> owner{};
+    std::shared_ptr<const ContainerBase> owner{};
 };
 
 // fat 'Dependency' weak pointer
@@ -153,7 +153,7 @@ private:
 // become empty after the 'Container' goes out of scope
 template <typename T>
 class WeakPtr {
-    WeakPtr(T* ptr, std::shared_ptr<ContainerBase> owner)
+    WeakPtr(T* ptr, std::shared_ptr<const ContainerBase> owner)
         : ptr(ptr)
         , owner(ptr ? std::move(owner) : nullptr) {}
 
@@ -207,7 +207,7 @@ public:
 
 private:
     T* ptr{};
-    std::weak_ptr<ContainerBase> owner{};
+    std::weak_ptr<const ContainerBase> owner{};
 };
 
 } // namespace liant

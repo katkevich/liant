@@ -70,7 +70,7 @@ private:
     friend class Container;
 
     template <typename TInterface>
-    auto get() {
+    auto get() const {
         return static_cast<TInterface*>(item);
     }
 
@@ -138,7 +138,7 @@ public:
     }
 
     template <typename TInterface>
-    auto& findItem() {
+    auto& findItem() const {
         static_assert(liant::Print<TInterface>,
             "You're trying to find an interface which isn't registered within DI container "
             "(search 'liant::Print' in the compilation output for details)");
@@ -182,7 +182,7 @@ public:
     // trying to find already created instance registered 'as TInterface'
     // the unsafe raw pointer is being returned here so make sure it doesn't outlive the 'Container' itself
     template <typename TInterface>
-    TInterface* findRaw() {
+    TInterface* findRaw() const {
         auto& item = findItem<TInterface>();
         return item.template get<TInterface>();
     }
@@ -190,7 +190,7 @@ public:
     // trying to find already created instance registered 'as TInterface'
     // returned fat 'WeakPtr' pointer become nullptr after the 'Container' goes out of scope
     template <typename TInterface>
-    SharedPtr<TInterface> find() {
+    SharedPtr<TInterface> find() const {
         auto& item = findItem<TInterface>();
         return SharedPtr<TInterface>(item.template get<TInterface>(), Container::shared_from_this());
     }
@@ -349,8 +349,13 @@ private:
         return std::get<static_cast<std::size_t>(ItemIndex)>(items);
     }
 
+    template <std::ptrdiff_t ItemIndex>
+    const auto& getItem() const {
+        return std::get<static_cast<std::size_t>(ItemIndex)>(items);
+    }
+
     template <typename TInterface>
-    auto& findItem() {
+    const auto& findItem() const {
         if constexpr (constexpr std::ptrdiff_t itemIndex = findItemIndex<TInterface>(); itemIndex != -1) {
             return getItem<itemIndex>();
         } else {
@@ -361,7 +366,7 @@ private:
     template <typename TInterface>
     DestroyItemFn makeDeleter() {
         return +[](Container& self) {
-            auto& item = self.findItem<TInterface>();
+            auto& item = self.getItem<findItemIndex<TInterface>()>();
             item.destroy();
         };
     }
