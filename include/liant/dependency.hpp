@@ -11,6 +11,19 @@ class Dependency {
     template <typename... TTypes>
     friend class Dependencies;
 
+public:
+    using Interface = T;
+    using interface_type = Interface;
+
+    T* operator->() {
+        return std::addressof(dependency);
+    }
+
+    const T* operator->() const {
+        return std::addressof(dependency);
+    }
+
+protected:
     Dependency(T& dependency)
         : dependency(dependency) {}
 
@@ -21,7 +34,7 @@ class Dependency {
 // custom lookups are generated using LIANT_DEPENDENCY(...) macro and will be found via ADL
 template <typename T>
 auto liantPrettyDependencyLookup(liant::TypeIdentity<T>) {
-    return liant::TypeIdentity<liant::Dependency<T>>{};
+    return TypeIdentity<Dependency<T>>{};
 }
 
 template <typename T>
@@ -34,6 +47,7 @@ template <typename... TTypes>
 class Dependencies : public PrettyDependency<TTypes>... {
 public:
     using Interfaces = TypeList<TTypes...>;
+    using interfaces_type = Interfaces;
 
     template <typename UBaseContainer, typename... UTypeMappings>
     Dependencies(Container<UBaseContainer, UTypeMappings...>& container)
@@ -58,26 +72,23 @@ public:
 
 // no need to open liant:: namespace in order to define custom Pretty dependency
 // 'liantPrettyDependencyLookup' uses ADL in order to find correct Pretty dependency customization point
-#define LIANT_DEPENDENCY(Type, getterPrettyName)                    \
-    struct LiantPrettyDependency_##Type {                           \
-        template <typename... UTypes>                               \
-        friend class Dependencies;                                  \
-                                                                    \
-        LiantPrettyDependency_##Type(Type& dependency)              \
-            : dependency(dependency) {}                             \
-                                                                    \
-        Type& dependency;                                           \
-                                                                    \
-    public:                                                         \
-        Type& getterPrettyName() {                                  \
-            return dependency;                                      \
-        }                                                           \
-        const Type& getterPrettyName() const {                      \
-            return dependency;                                      \
-        }                                                           \
-    };                                                              \
-                                                                    \
-    /* exploit ADL lookup */                                        \
-    auto liantPrettyDependencyLookup(liant::TypeIdentity<Type>) {   \
-        return liant::TypeIdentity<LiantPrettyDependency_##Type>{}; \
+#define LIANT_DEPENDENCY(Type, getterPrettyName)                          \
+    class LiantPrettyDependency_##Type : public liant::Dependency<Type> { \
+        template <typename... UTypes>                                     \
+        friend class Dependencies;                                        \
+                                                                          \
+        using Dependency<Type>::Dependency;                               \
+                                                                          \
+    public:                                                               \
+        Type& getterPrettyName() {                                        \
+            return dependency;                                            \
+        }                                                                 \
+        const Type& getterPrettyName() const {                            \
+            return dependency;                                            \
+        }                                                                 \
+    };                                                                    \
+                                                                          \
+    /* exploit ADL lookup */                                              \
+    auto liantPrettyDependencyLookup(liant::TypeIdentity<Type>) {         \
+        return liant::TypeIdentity<LiantPrettyDependency_##Type>{};       \
     }

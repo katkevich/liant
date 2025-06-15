@@ -10,8 +10,10 @@ target_sources(liant INTERFACE
         include/liant/liant.hpp
         include/liant/container.hpp
         include/liant/dependency.hpp
+        include/liant/ptr.hpp
         include/liant/tuple.hpp
         include/liant/typelist.hpp
+        include/liant/snake_case.hpp
 )
 target_compile_features(liant INTERFACE cxx_std_20)
 target_compile_options(liant INTERFACE

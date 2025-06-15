@@ -26,6 +26,13 @@ struct TypeMapping<LifetimeV, T, TypeList<TInterfaces...>, TypeList<TCtorArgs...
     using CtorArgs = TypeList<TCtorArgs...>;
     using CtorArgsTuple = std::tuple<TCtorArgs...>;
     static constexpr ItemLifetime Lifetime = LifetimeV;
+
+    // snake_case aliases
+    using type = Type;
+    using interfaces_type = Interfaces;
+    using ctor_args_type = CtorArgs;
+    using ctor_args_tuple_type = CtorArgsTuple;
+    static constexpr ItemLifetime lifetime_value = Lifetime;
 };
 
 
@@ -33,6 +40,7 @@ template <typename TTypeMapping>
 class RegisteredItem {
 public:
     using Mapping = TTypeMapping;
+    using mapping_type = Mapping;
 
     RegisteredItem()
         requires std::default_initializable<typename TTypeMapping::CtorArgsTuple>
@@ -123,6 +131,7 @@ using EmptyDependenciesChain = TypeList<>;
 class EmptyContainer {
 public:
     using RegisteredItems = TypeList<>;
+    using registered_items_type = RegisteredItems;
 
     void resolveAll() {
         // do nothing
