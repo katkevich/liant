@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.28)
 
-project(liant)
+project(liant VERSION 1.0.0)
 
 add_library(liant INTERFACE)
 target_sources(liant INTERFACE
@@ -33,12 +33,9 @@ set_target_properties(liant PROPERTIES CXX_STANDARD_REQUIRED ON)
 #
 # Tests
 #
-option(LIANT_BUILD_TESTS "Build Liant tests" ${PROJECT_IS_TOP_LEVEL})
-
-if (LIANT_BUILD_TESTS)
-    enable_testing()
-    add_subdirectory(tests)
-endif()
+enable_testing()
+# you need to build text targets explicitly
+add_subdirectory(tests EXCLUDE_FROM_ALL)
 
 #
 # Library installation
@@ -50,8 +47,8 @@ set(LIANT_INSTALL_CMAKE_DIR ${CMAKE_INSTALL_LIBDIR}/cmake/liant)
 
 # generate version file
 write_basic_package_version_file(
-    "${PROJECT_BINARY_DIR}/liant-version.cmake"
-    VERSION 1.0.0
+    "${PROJECT_BINARY_DIR}/liant-config-version.cmake"
+    VERSION ${PROJECT_VERSION}
     COMPATIBILITY SameMinorVersion
     ARCH_INDEPENDENT
 )
@@ -80,6 +77,6 @@ install(
 install(
     FILES
         "${PROJECT_BINARY_DIR}/liant-config.cmake"
-        "${PROJECT_BINARY_DIR}/liant-version.cmake"
+        "${PROJECT_BINARY_DIR}/liant-config-version.cmake"
     DESTINATION ${LIANT_INSTALL_CMAKE_DIR}
 )

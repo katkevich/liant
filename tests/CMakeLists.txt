@@ -10,9 +10,6 @@ FetchContent_Declare(doctest
 )
 FetchContent_MakeAvailable(doctest)
 
-#
-# Regular 'runtime' tests
-#
 add_executable(test-liant
     src/data.hpp
     src/single_container.cpp
