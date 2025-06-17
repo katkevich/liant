@@ -1,15 +1,21 @@
 #pragma once
+#include "liant/export_macro.hpp"
 #include "liant/ptr.hpp"
 #include "liant/tuple.hpp"
 #include "liant/typelist.hpp"
 
+#ifndef LIANT_MODULE
 #include <concepts>
 #include <functional>
 #include <memory>
 #include <tuple>
 #include <type_traits>
 #include <vector>
+#endif
 
+// clang-format off
+LIANT_EXPORT
+// clang-format on
 namespace liant {
 
 enum class ItemLifetime { External, DI };
@@ -278,7 +284,7 @@ private:
     // TDependenciesChain is there to detect dependencies cycles at compile time
     template <typename TDependenciesChain, typename... TInterfaces>
     void instantiateAll(TypeList<TInterfaces...>) {
-        TypeList<TInterfaces...>::template forEach([&]<typename TInterface>() { //
+        TypeList<TInterfaces...>::forEach([&]<typename TInterface>() { //
             resolveInternal<TInterface, TDependenciesChain>();
         });
     }

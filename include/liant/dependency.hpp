@@ -1,8 +1,15 @@
 #pragma once
+#include "liant/export_macro.hpp"
 #include "liant/container.hpp"
 #include "liant/typelist.hpp"
-#include <memory>
 
+#ifndef LIANT_MODULE
+#include <memory>
+#endif
+
+// clang-format off
+LIANT_EXPORT
+// clang-format on
 namespace liant {
 
 // default 'Dependency' implementation without custom 'pretty' getters

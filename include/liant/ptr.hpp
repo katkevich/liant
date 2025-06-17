@@ -1,6 +1,13 @@
 #pragma once
-#include <memory>
+#include "liant/export_macro.hpp"
 
+#ifndef LIANT_MODULE
+#include <memory>
+#endif
+
+// clang-format off
+LIANT_EXPORT
+// clang-format on
 namespace liant {
 
 class ContainerBase;

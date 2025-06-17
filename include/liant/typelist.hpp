@@ -1,8 +1,15 @@
 #pragma once
+#include "liant/export_macro.hpp"
+
+#ifndef LIANT_MODULE
 #include <array>
 #include <cstddef>
 #include <type_traits>
+#endif
 
+// clang-format off
+LIANT_EXPORT
+// clang-format on
 namespace liant {
 
 struct Nothing {};
@@ -95,8 +102,9 @@ struct TypeListMerge<TypeList<Ts...>, TypeList<Us...>, TTypeListsTail...> {
 
 template <typename... TTypeLists>
 using TypeListMergeT = typename TypeListMerge<TTypeLists...>::type;
+} // namespace liant
 
-
+namespace liant {
 template <typename... Ts>
 static constexpr bool Print = false;
 

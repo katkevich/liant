@@ -1,7 +1,11 @@
 #pragma once
+#include "liant/export_macro.hpp"
 #include "liant/liant.hpp"
 #include "liant/ptr.hpp"
 
+// clang-format off
+LIANT_EXPORT
+// clang-format on
 namespace liant {
 inline namespace snake_case {
 
