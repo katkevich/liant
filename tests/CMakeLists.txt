@@ -17,7 +17,7 @@ add_executable(test-liant
     src/dependencies.cpp
 )
 
-target_link_libraries(test-liant liant doctest::doctest_with_main)
+target_link_libraries(test-liant liant::liant doctest::doctest_with_main)
 target_compile_definitions(test-liant PUBLIC
     DOCTEST_CONFIG_VOID_CAST_EXPRESSIONS
 )
