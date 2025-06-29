@@ -1,7 +1,7 @@
 import liant;
 import std;
 
-// ain't strictly necessary but nice to have if you want use 'LIANT_DEPENDENCY' functionality
+// ain't strictly neccesary but nice to have if you want use 'LIANT_DEPENDENCY' functionality
 #include "liant/dependency_macro.hpp"
 
 namespace example {

@@ -10,15 +10,15 @@ FetchContent_Declare(doctest
 )
 FetchContent_MakeAvailable(doctest)
 
-add_executable(test-liant
+add_executable(test_liant
     src/data.hpp
     src/single_container.cpp
     src/base_container.cpp
     src/dependencies.cpp
 )
 
-target_link_libraries(test-liant liant::liant doctest::doctest_with_main)
-target_compile_definitions(test-liant PUBLIC
+target_link_libraries(test_liant liant::liant doctest::doctest_with_main)
+target_compile_definitions(test_liant PUBLIC
     DOCTEST_CONFIG_VOID_CAST_EXPRESSIONS
 )
 
@@ -27,4 +27,4 @@ target_compile_definitions(test-liant PUBLIC
 #
 list(APPEND CMAKE_MODULE_PATH ${doctest_SOURCE_DIR}/scripts/cmake)
 include(doctest)
-doctest_discover_tests(test-liant)
+doctest_discover_tests(test_liant)

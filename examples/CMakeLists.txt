@@ -11,7 +11,7 @@ set_target_properties(example_liant_mod PROPERTIES
     CXX_EXTENSIONS ON
     CXX_MODULE_STD ON
 )
-target_link_libraries(example_liant_mod PUBLIC liant::liant_mod)
+target_link_libraries(example_liant_mod PUBLIC liant::liant_module)
 
 
 # Liant as a C++20 module and standard headers in global module fragment
@@ -23,4 +23,4 @@ set_target_properties(example_liant_mod_nostd PROPERTIES
     CXX_STANDARD_REQUIRED ON
     CXX_EXTENSIONS OFF
 )
-target_link_libraries(example_liant_mod_nostd PUBLIC liant::liant_mod_nostd)
+target_link_libraries(example_liant_mod_nostd PUBLIC liant::liant_module_nostd)
