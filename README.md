@@ -79,7 +79,7 @@ We will use **llvm-20** toolchain and **CMake 4.0.3**
 1.  Clone the repository:
 
     ```bash
-    git clone [https://github.com/Katkevich/liant.git](https://github.com/Katkevich/liant.git)
+    git clone https://github.com/Katkevich/liant.git
     cd liant
     ```
 
