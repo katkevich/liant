@@ -192,8 +192,8 @@ public:
     }
     ~Container() {
         // destroy items in the order opposite to the creation order
-        for (auto it = deleters.rbegin(); it != deleters.rend(); ++it) {
-            (*it)(*this);
+        for (auto i = deleters.size(); i > 0; --i) {
+            deleters[i - 1](*this);
         }
     }
 
@@ -329,7 +329,7 @@ private:
                             // item depends on nothing from DI container (it is a leaf of a dependencies tree) so it can be created right away
                             return instantiate<TInterface>(item, *this, std::forward<UArgs>(args)...);
                         } else {
-                            static_assert(liant::Print<typename TRegisteredItem::Mapping::Type>,
+                            static_assert(liant::Print<typename TRegisteredItem::Mapping::Type, UArgs...>,
                                 "Cannot create an instance of a type you've registered within DI container. "
                                 "You've provided wrong ctor arguments during DI container bindings setup "
                                 "(search 'liant::Print' in the compilation output for details).");

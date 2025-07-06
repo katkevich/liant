@@ -1,5 +1,6 @@
 #pragma once
 #include "liant/dependency.hpp"
+#include <string>
 
 namespace liant::test {
 

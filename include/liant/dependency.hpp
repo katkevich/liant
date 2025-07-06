@@ -45,7 +45,7 @@ auto liantPrettyDependencyLookup(liant::TypeIdentity<T>) {
 }
 
 template <typename T>
-using PrettyDependency = decltype(liantPrettyDependencyLookup(liant::TypeIdentity<T>{}))::type;
+using PrettyDependency = typename decltype(liantPrettyDependencyLookup(liant::TypeIdentity<T>{}))::type;
 
 
 // subset of dependencies from DI root container

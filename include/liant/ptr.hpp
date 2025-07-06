@@ -119,7 +119,7 @@ public:
     }
 
     T* get() {
-        if (owner != nullptr) {
+        if (owner) {
             return ptr;
         } else {
             return nullptr;
@@ -139,7 +139,7 @@ public:
     }
 
     explicit operator bool() const {
-        return owner != nullptr && ptr != nullptr;
+        return owner && ptr;
     }
 
     friend bool operator==(const SharedPtr& lhs, const SharedPtr& rhs) {
