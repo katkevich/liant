@@ -41,7 +41,7 @@ struct TypeList {
     }
 
     static constexpr std::ptrdiff_t findDuplicate() {
-        return find([]<typename T>() { return ((std::is_same_v<T, Ts> ? 1 : 0) + ...) == 2; });
+        return find([]<typename T>() { return ((std::is_same_v<T, Ts> ? 1 : 0) + ... + 0) >= 2; });
     }
 
     template <typename TTypeFn>

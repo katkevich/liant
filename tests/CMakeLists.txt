@@ -14,6 +14,7 @@ add_executable(test_liant
     src/data.hpp
     src/single_container.cpp
     src/base_container.cpp
+    src/container_slice.cpp
     src/dependencies.cpp
 )
 

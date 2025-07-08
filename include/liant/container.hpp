@@ -132,12 +132,23 @@ auto registerInstance(T& item) {
 template <typename... TInterfaces>
 class Dependencies;
 
+template <typename... TTypes>
+class ContainerSlice;
+
 using EmptyDependenciesChain = TypeList<>;
 
 class EmptyContainer {
 public:
     using RegisteredItems = TypeList<>;
     using registered_items_type = RegisteredItems;
+
+    const EmptyContainer* operator->() const {
+        return this;
+    }
+
+    EmptyContainer* operator->() {
+        return this;
+    }
 
     void resolveAll() {
         // do nothing
@@ -186,7 +197,7 @@ class Container : public ContainerBase, public std::enable_shared_from_this<Cont
 public:
     using RegisteredItems = TypeList<RegisteredItem<TTypeMappings>...>;
 
-    Container(std::shared_ptr<TBaseContainer> baseContainer, RegisteredItem<TTypeMappings>... items)
+    Container(TBaseContainer baseContainer, RegisteredItem<TTypeMappings>... items)
         : items{ items... }
         , baseContainer(std::move(baseContainer)) {
         deleters.reserve(sizeof...(TTypeMappings));
@@ -391,26 +402,31 @@ private:
 private:
     std::tuple<RegisteredItem<TTypeMappings>...> items;
     std::vector<DestroyItemFn> deleters;
-    std::shared_ptr<TBaseContainer> baseContainer;
-};
-
-template <typename TContainer>
-struct BaseContainer {
-    std::shared_ptr<TContainer> container;
+    TBaseContainer baseContainer;
 };
 
 template <typename TBaseContainer, typename... TTypeMappings>
-auto baseContainer(std::shared_ptr<Container<TBaseContainer, TTypeMappings...>> container) {
-    return BaseContainer<Container<TBaseContainer, TTypeMappings...>>{ std::move(container) };
+auto baseContainer(const std::shared_ptr<Container<TBaseContainer, TTypeMappings...>>& container) {
+    return container;
+}
+
+template <typename... TInterfaces>
+auto baseContainer(const ContainerSlice<TInterfaces...>& containerSlice) {
+    return containerSlice;
 }
 
 template <typename... TTypeMappings>
 auto makeContainer(RegisteredItem<TTypeMappings>... items) {
-    return std::make_shared<liant::Container<EmptyContainer, TTypeMappings...>>(std::make_shared<EmptyContainer>(), items...);
+    return std::make_shared<liant::Container<EmptyContainer, TTypeMappings...>>(EmptyContainer{}, items...);
 }
 
 template <typename TBaseContainer, typename... TTypeMappings>
-auto makeContainer(BaseContainer<TBaseContainer> baseContainer, RegisteredItem<TTypeMappings>... items) {
-    return std::make_shared<liant::Container<TBaseContainer, TTypeMappings...>>(std::move(baseContainer.container), items...);
+auto makeContainer(const std::shared_ptr<TBaseContainer>& baseContainer, RegisteredItem<TTypeMappings>... items) {
+    return std::make_shared<liant::Container<std::shared_ptr<TBaseContainer>, TTypeMappings...>>(baseContainer, items...);
+}
+
+template <typename... TBaseTypes, typename... TTypeMappings>
+auto makeContainer(const ContainerSlice<TBaseTypes...>& baseContainer, RegisteredItem<TTypeMappings>... items) {
+    return std::make_shared<liant::Container<ContainerSlice<TBaseTypes...>, TTypeMappings...>>(baseContainer, items...);
 }
 } // namespace liant

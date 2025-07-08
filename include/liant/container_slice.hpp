@@ -58,12 +58,20 @@ public:
 
     template <typename TInterface>
     TInterface* findRaw() const {
+        static_assert(liant::PrintConditional<TypeList<TInterfaces...>::template contains<TInterface>(), TInterface>,
+            "You're trying to find an interface which isn't specified in 'TInterfaces...' list of 'ContainerSlice' "
+            "(search 'liant::Print' in the compilation output for details)");
+
         const VTable<TInterface>& vtableItem = std::get<VTable<TInterface>>(*vtable);
         return (*vtableItem.findRawErased)(vtableItem, *container);
     }
 
     template <typename TInterface, typename... TArgs>
     TInterface& resolveRaw() {
+        static_assert(liant::PrintConditional<TypeList<TInterfaces...>::template contains<TInterface>(), TInterface>,
+            "You're trying to resolve an interface which isn't specified in 'TInterfaces...' list of 'ContainerSlice' "
+            "(search 'liant::Print' in the compilation output for details)");
+
         static_assert(liant::PrintConditional<sizeof...(TArgs) == 0, TInterface>,
             "Cannot resolve an interface from a 'liant::Container<...>' through 'liant::ContainerSlice<...>' using "
             "explicit arguments. The reason is that 'liant::ContainerSlice<...>' erases 'liant::Container<...>' type "
