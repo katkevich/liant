@@ -24,3 +24,31 @@ set_target_properties(example_liant_mod_nostd PROPERTIES
     CXX_EXTENSIONS OFF
 )
 target_link_libraries(example_liant_mod_nostd PUBLIC liant::liant_module_nostd)
+
+
+# Circular dependency detection at compile time
+add_executable(example_detect_dependencies_cycle
+    src/02_detect_dependencies_cycle.cpp
+)
+target_compile_features(example_detect_dependencies_cycle PRIVATE cxx_std_23)
+set_target_properties(example_detect_dependencies_cycle PROPERTIES
+    CXX_STANDARD_REQUIRED ON
+    CXX_EXTENSIONS ON
+    CXX_MODULE_STD ON
+)
+target_link_libraries(example_detect_dependencies_cycle PUBLIC liant::liant_module)
+# target_link_libraries(example_detect_dependencies_cycle PUBLIC liant::liant)
+
+
+# Circular dependency detection at compile time
+add_executable(example_detect_dependencies_cycle_in_base_container
+    src/03_detect_dependency_cycle_in_base_container.cpp
+)
+target_compile_features(example_detect_dependencies_cycle_in_base_container PRIVATE cxx_std_23)
+set_target_properties(example_detect_dependencies_cycle_in_base_container PROPERTIES
+    CXX_STANDARD_REQUIRED ON
+    CXX_EXTENSIONS ON
+    CXX_MODULE_STD ON
+)
+target_link_libraries(example_detect_dependencies_cycle_in_base_container PUBLIC liant::liant_module)
+# target_link_libraries(example_detect_dependencies_cycle_in_base_container PUBLIC liant::liant)

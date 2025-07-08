@@ -129,7 +129,7 @@ auto registerInstance(T& item) {
     return RegisteredItem<TypeMapping<ItemLifetime::External, T, TypeList<T>, TypeList<>>>{ std::addressof(item) };
 }
 
-template <typename... TTypes>
+template <typename... TInterfaces>
 class Dependencies;
 
 using EmptyDependenciesChain = TypeList<>;
@@ -156,7 +156,7 @@ public:
     }
 
     template <typename TInterface>
-    auto& findItem() const {
+    TInterface* findRaw() const {
         static_assert(liant::Print<TInterface>,
             "You're trying to find an interface which isn't registered within DI container "
             "(search 'liant::Print' in the compilation output for details)");
@@ -166,6 +166,7 @@ public:
 class ContainerBase {
 public:
     virtual ~ContainerBase() = default;
+    virtual void resolveAll() = 0;
 };
 
 template <typename TBaseContainer, typename... TTypeMappings>
@@ -201,16 +202,14 @@ public:
     // the unsafe raw pointer is being returned here so make sure it doesn't outlive the 'Container' itself
     template <typename TInterface>
     TInterface* findRaw() const {
-        auto& item = findItem<TInterface>();
-        return item.template get<TInterface>();
+        return findInternal<TInterface>();
     }
 
     // trying to find already created instance registered 'as TInterface'
     // returned fat 'WeakPtr' pointer become nullptr after the 'Container' goes out of scope
     template <typename TInterface>
     SharedPtr<TInterface> find() const {
-        auto& item = findItem<TInterface>();
-        return SharedPtr<TInterface>(item.template get<TInterface>(), Container::shared_from_this());
+        return SharedPtr<TInterface>(findInternal<TInterface>(), Container::shared_from_this());
     }
 
     // resolve an instance of type registered 'as TInterface'
@@ -246,7 +245,7 @@ public:
     // - or registered type should be only constructible from 'Dependencies<...>'
     // - or you should provide ctor arguments while calling 'Container::resolve<...>'
     // - or you should provide ctor arguments bindings while configuring DI mappings (bindArgs(...))
-    void resolveAll() {
+    virtual void resolveAll() final {
         baseContainer->resolveAll();
 
         liant::tuple::forEach(items, [&]<typename TTypeMapping>(RegisteredItem<TTypeMapping>&) {
@@ -277,7 +276,7 @@ private:
             return instantiateOne<TInterface, TDependenciesChain>(getItem<itemIndex>(), std::forward<TArgs>(args)...);
         } else {
             // otherwise delegate to the base container which may possibly have TInterface
-            return baseContainer->template resolveInternal<TInterface, TDependenciesChain>(std::forward<TArgs>(args)...);
+            return baseContainer->template resolveRaw<TInterface>(std::forward<TArgs>(args)...);
         }
     }
 
@@ -373,11 +372,11 @@ private:
     }
 
     template <typename TInterface>
-    const auto& findItem() const {
+    auto* findInternal() const {
         if constexpr (constexpr std::ptrdiff_t itemIndex = findItemIndex<TInterface>(); itemIndex != -1) {
-            return getItem<itemIndex>();
+            return getItem<itemIndex>().template get<TInterface>();
         } else {
-            return baseContainer->template findItem<TInterface>();
+            return baseContainer->template findRaw<TInterface>();
         }
     }
 

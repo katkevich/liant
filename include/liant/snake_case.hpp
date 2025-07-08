@@ -14,13 +14,16 @@ using container_base = ContainerBase;
 template <typename TBaseContainer, typename... TTypeMappings>
 using container = Container<TBaseContainer, TTypeMappings...>;
 
+template <typename... TInterfaces>
+using container_slice = ContainerSlice<TInterfaces...>;
+
 using empty_container = EmptyContainer;
 
 template <typename TTypeMapping>
 using registered_item = RegisteredItem<TTypeMapping>;
 
-template <typename... TTypes>
-using dependencies = Dependencies<TTypes...>;
+template <typename... TInterfaces>
+using dependencies = Dependencies<TInterfaces...>;
 
 template <typename TType>
 using dependency = Dependency<TType>;

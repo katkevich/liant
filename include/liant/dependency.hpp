@@ -15,7 +15,7 @@ namespace liant {
 // default 'Dependency' implementation without custom 'pretty' getters
 template <typename T>
 class Dependency {
-    template <typename... TTypes>
+    template <typename... TInterfaces>
     friend class Dependencies;
 
 public:
@@ -50,28 +50,28 @@ using PrettyDependency = typename decltype(liantPrettyDependencyLookup(liant::Ty
 
 // subset of dependencies from DI root container
 // each of you dependencies will have an instance of this class, thereby referring to its own dependencies
-template <typename... TTypes>
-class Dependencies : public PrettyDependency<TTypes>... {
+template <typename... TInterfaces>
+class Dependencies : public PrettyDependency<TInterfaces>... {
 public:
-    using Interfaces = TypeList<TTypes...>;
+    using Interfaces = TypeList<TInterfaces...>;
     using interfaces_type = Interfaces;
 
     template <typename UBaseContainer, typename... UTypeMappings>
     Dependencies(Container<UBaseContainer, UTypeMappings...>& container)
-        : PrettyDependency<TTypes>{ container.template resolveRaw<TTypes>() }... {}
+        : PrettyDependency<TInterfaces>{ container.template resolveRaw<TInterfaces>() }... {}
 
-    template <typename TType>
+    template <typename TInterface>
     auto& get() {
-        static_assert(TypeList<TTypes...>::template contains<TType>(),
-            "type you're trying to get is not registered in DI container");
-        return *static_cast<PrettyDependency<TType>*>(this)->dependency;
+        static_assert(TypeList<TInterfaces...>::template contains<TInterface>(),
+            "interface you're trying to get is not registered in DI container");
+        return *static_cast<PrettyDependency<TInterface>*>(this)->dependency;
     }
 
-    template <typename TType>
+    template <typename TInterface>
     const auto& get() const {
-        static_assert(TypeList<TTypes...>::template contains<TType>(),
-            "type you're trying to get is not registered in DI container");
-        return *static_cast<const PrettyDependency<TType>*>(this)->dependency;
+        static_assert(TypeList<TInterfaces...>::template contains<TInterface>(),
+            "interface you're trying to get is not registered in DI container");
+        return *static_cast<const PrettyDependency<TInterface>*>(this)->dependency;
     }
 };
 
