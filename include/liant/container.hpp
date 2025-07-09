@@ -217,7 +217,7 @@ public:
     }
 
     // trying to find already created instance registered 'as TInterface'
-    // returned fat 'WeakPtr' pointer become nullptr after the 'Container' goes out of scope
+    // returned fat 'SharedRef' protects 'Container' from being destroyed so use 'SharedRef' with caution (you don't really want block 'Container' deletion)
     template <typename TInterface>
     SharedPtr<TInterface> find() const {
         return SharedPtr<TInterface>(findInternal<TInterface>(), Container::shared_from_this());

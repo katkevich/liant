@@ -65,7 +65,7 @@ TEST_CASE("ensure 'resolveAll' on base container slice resolves only types from 
         liant::registerInstanceOf<DerivedType34>().as<Interface3, Interface4>()
     );
     // clang-format on
-    slice->resolveAll();
+    slice.resolveAll();
 
     REQUIRE(container->find<TrivialType1>());
     REQUIRE(container->find<Interface1>());
