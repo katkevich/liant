@@ -53,48 +53,50 @@ struct ContainerPtr<ContainerPtrKind::Shared> {
     }
 };
 
+template <typename TInterface>
+struct VTable {
+    auto (*findRawErased)(const VTable<TInterface>& self, liant::ContainerBase& container) -> TInterface*;
+    auto (*resolveRawErased)(const VTable<TInterface>& self, liant::ContainerBase& container) -> TInterface&;
+
+    template<typename TContainer>
+    TInterface* findRaw(TContainer& container) const {
+        return container.template findRaw<TInterface>();
+    }
+
+    template<typename TContainer>
+    TInterface& resolveRaw(TContainer& container) const {
+        return container.template resolveRaw<TInterface>();
+    }
+};
+
+// MSVC compiler (19.38) doesn't like it to be defined inside ContainerSliceBase class
+// So unfortunately, we're forced to move these guts out of ContainerSliceBase class scope
+template <typename TContainer, typename... TInterfaces>
+static constexpr std::tuple<VTable<TInterfaces>...> vtableFor = { VTable<TInterfaces>{
+    [](const VTable<TInterfaces>& self, ContainerBase& container) -> TInterfaces* {
+        return self.findRaw(static_cast<TContainer&>(container));
+    },
+    [](const VTable<TInterfaces>& self, ContainerBase& container) -> TInterfaces& {
+        return self.resolveRaw(static_cast<TContainer&>(container));
+    },
+}... };
+
 // common base class for liant::ContainerSlice (owning) & liant::ContainerView (non-owning)
 template <ContainerPtrKind PtrKind, typename... TInterfaces>
-class ContainerSliceBase : public PrettyDependency<ContainerSliceBase<PtrKind, TInterfaces...>, TInterfaces>... {
+class ContainerSliceBase : public liant::PrettyDependency<ContainerSliceBase<PtrKind, TInterfaces...>, TInterfaces>... {
     template <typename TBaseContainer, typename... TTypeMappings>
     friend class liant::Container;
 
-    template <typename TInterface>
-    struct VTable {
-        auto (*findRawErased)(const VTable<TInterface>& self, ContainerBase& container) -> TInterface*;
-        auto (*resolveRawErased)(const VTable<TInterface>& self, ContainerBase& container) -> TInterface&;
-
-        template <typename TContainer>
-        TInterface* findRaw(TContainer& container) const {
-            return container.template findRaw<TInterface>();
-        }
-
-        template <typename TContainer>
-        TInterface& resolveRaw(TContainer& container) const {
-            return container.template resolveRaw<TInterface>();
-        }
-    };
-
     const std::tuple<VTable<TInterfaces>...>* vtable{};
-
-    template <typename TContainer>
-    static constexpr std::tuple<VTable<TInterfaces>...> vtableFor = { VTable<TInterfaces>{
-        +[](const VTable<TInterfaces>& self, ContainerBase& container) -> TInterfaces* {
-            return self.findRaw(static_cast<TContainer&>(container));
-        },
-        +[](const VTable<TInterfaces>& self, ContainerBase& container) -> TInterfaces& {
-            return self.resolveRaw(static_cast<TContainer&>(container));
-        },
-    }... };
 
 public:
     template <typename UBaseContainer, typename... UTypeMappings>
     ContainerSliceBase(const std::shared_ptr<Container<UBaseContainer, UTypeMappings...>>& container)
-        : vtable(std::addressof(vtableFor<Container<UBaseContainer, UTypeMappings...>>))
+        : vtable(std::addressof(vtableFor<Container<UBaseContainer, UTypeMappings...>, TInterfaces...>))
         , container(container) {}
     template <typename UBaseContainer, typename... UTypeMappings>
     ContainerSliceBase(std::shared_ptr<Container<UBaseContainer, UTypeMappings...>>&& container)
-        : vtable(std::addressof(vtableFor<Container<UBaseContainer, UTypeMappings...>>))
+        : vtable(std::addressof(vtableFor<Container<UBaseContainer, UTypeMappings...>, TInterfaces...>))
         , container(std::move(container)) {}
 
     ContainerSliceBase(const ContainerSliceBase&) = default;
