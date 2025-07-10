@@ -9,6 +9,12 @@
 LIANT_EXPORT
 // clang-format on
 namespace liant {
+namespace details {
+enum class ContainerPtrKind;
+
+template <ContainerPtrKind PtrKind, typename... TInterfaces>
+class ContainerSliceBase;
+} // namespace details
 
 class ContainerBase;
 
@@ -20,11 +26,14 @@ template <typename T>
 class SharedRef {
     template <typename UBaseContainer, typename... UTypeMappings>
     friend class Container;
+    
+    template <details::ContainerPtrKind PtrKind, typename... TInterfaces>
+    friend class details::ContainerSliceBase;
 
     template <typename U>
     friend class WeakPtr;
 
-    SharedRef(T& ref, std::shared_ptr<const ContainerBase> owner)
+    SharedRef(T& ref, std::shared_ptr<ContainerBase> owner)
         : ptr(std::addressof(ref))
         , owner(std::move(owner)) {}
 
@@ -73,8 +82,8 @@ public:
     }
 
 private:
-    T* ptr{};                                     // never nullptr
-    std::shared_ptr<const ContainerBase> owner{}; // never nullptr
+    T* ptr{};                               // never nullptr
+    std::shared_ptr<ContainerBase> owner{}; // never nullptr
 };
 
 
@@ -86,6 +95,9 @@ template <typename T>
 class SharedPtr {
     template <typename UBaseContainer, typename... UTypeMappings>
     friend class Container;
+
+    template <details::ContainerPtrKind PtrKind, typename... TInterfaces>
+    friend class details::ContainerSliceBase;
 
     template <typename U>
     friend class WeakPtr;

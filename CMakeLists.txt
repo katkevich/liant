@@ -32,7 +32,9 @@ target_compile_options(liant_warn_lvl INTERFACE
 set(LIANT_HEADERS
     include/liant/liant.hpp
     include/liant/container.hpp
-    include/liant/dependency.hpp
+    include/liant/container_slice.hpp
+    include/liant/container_slice_base.hpp
+    include/liant/container_view.hpp
     include/liant/ptr.hpp
     include/liant/tuple.hpp
     include/liant/typelist.hpp

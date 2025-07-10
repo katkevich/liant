@@ -91,14 +91,20 @@ private:
         return static_cast<TInterface*>(item);
     }
 
-    // TDependenciesHolder may be either 'Container<...>' itself or 'Container<...>::DependenciesCtorHook'
-    template <typename TInterface, typename TDependenciesHolder, typename... TArgs>
-    auto& instantiate(TDependenciesHolder& dependenciesHolder, TArgs&&... args) {
-        if constexpr (std::is_constructible_v<typename TTypeMapping::Type, TDependenciesHolder&, TArgs&&...>) {
-            item = new TTypeMapping::Type{ dependenciesHolder, std::forward<TArgs>(args)... };
-        } else {
-            item = new TTypeMapping::Type{ std::forward<TArgs>(args)... };
+    template <typename TInterface, typename TContainerSliceCtorHook, typename... TArgs>
+    auto& instantiate(TContainerSliceCtorHook& hook, TArgs&&... args) {
+        item = new TTypeMapping::Type{ hook, std::forward<TArgs>(args)... };
+
+        if constexpr (requires { item->postCreate(); }) {
+            item->postCreate();
         }
+
+        return static_cast<TInterface&>(*item);
+    }
+
+    template <typename TInterface, typename... TArgs>
+    auto& instantiateTrivial(TArgs&&... args) {
+        item = new TTypeMapping::Type{ std::forward<TArgs>(args)... };
 
         if constexpr (requires { item->postCreate(); }) {
             item->postCreate();
@@ -129,59 +135,28 @@ auto registerInstance(T& item) {
     return RegisteredItem<TypeMapping<ItemLifetime::External, T, TypeList<T>, TypeList<>>>{ std::addressof(item) };
 }
 
-template <typename... TInterfaces>
-class Dependencies;
 
-template <typename... TTypes>
+template <typename... TInterfaces>
 class ContainerSlice;
 
+template <typename... TInterfaces>
+class ContainerSliceWeak;
+
+template <typename... TInterfaces>
+class ContainerView;
+
+
 using EmptyDependenciesChain = TypeList<>;
+class EmptyContainer;
 
-class EmptyContainer {
-public:
-    using RegisteredItems = TypeList<>;
-    using registered_items_type = RegisteredItems;
-
-    const EmptyContainer* operator->() const {
-        return this;
-    }
-
-    EmptyContainer* operator->() {
-        return this;
-    }
-
-    void resolveAll() {
-        // do nothing
-    }
-
-    template <typename TInterface, typename TDependenciesChain, typename... TArgs>
-    TInterface& resolveInternal(TArgs&&...) {
-        static_assert(liant::Print<TInterface>,
-            "You're trying to create or resolve an interface which isn't registered within DI container "
-            "(search 'liant::Print' in the compilation output for details)");
-    }
-
-    template <typename TInterface>
-    constexpr std::ptrdiff_t findItemIndex() {
-        return -1;
-    }
-
-    template <typename TInterface>
-    TInterface* findRaw() const {
-        static_assert(liant::Print<TInterface>,
-            "You're trying to find an interface which isn't registered within DI container "
-            "(search 'liant::Print' in the compilation output for details)");
-    }
-};
-
-class ContainerBase {
+class ContainerBase : public std::enable_shared_from_this<ContainerBase> {
 public:
     virtual ~ContainerBase() = default;
     virtual void resolveAll() = 0;
 };
 
 template <typename TBaseContainer, typename... TTypeMappings>
-class Container : public ContainerBase, public std::enable_shared_from_this<Container<TBaseContainer, TTypeMappings...>> {
+class Container : public ContainerBase {
     using DestroyItemFn = void (*)(Container&);
 
     template <typename UBaseContainer, typename... UTypeMappings>
@@ -253,7 +228,7 @@ public:
     // base container is being resolved as well
     // note: your types should satisfy some preconditions:
     // - registered type should be default-constructible
-    // - or registered type should be only constructible from 'Dependencies<...>'
+    // - or registered type should be only constructible from 'ContainerSlice<...>' / 'ContainerView<...>'
     // - or you should provide ctor arguments while calling 'Container::resolve<...>'
     // - or you should provide ctor arguments bindings while configuring DI mappings (bindArgs(...))
     virtual void resolveAll() final {
@@ -267,14 +242,26 @@ public:
 private:
     // while creating non-trivial dependency you need to create its dependencies first
     // and those dependencies should create theirs dependencies first and so on
-    // 'DependenciesCtorHook' allow us to build this recursive initialization chain and create the 'leafs' of this
+    // 'ContainerSliceCtorHook' allow us to build this recursive initialization chain and create the 'leafs' of this
     // dependencies tree first and from there go up all the way to the roots
     template <typename TDependenciesChain>
-    struct DependenciesCtorHook {
+    struct ContainerSliceCtorHook {
         template <typename... TInterfaces>
-        operator Dependencies<TInterfaces...>() {
+        operator ContainerSlice<TInterfaces...>() {
             container.instantiateAll<TDependenciesChain>(TypeList<TInterfaces...>{});
-            return Dependencies<TInterfaces...>{ container };
+            return ContainerSlice<TInterfaces...>{ std::static_pointer_cast<Container>(container.shared_from_this()) };
+        }
+
+        template <typename... TInterfaces>
+        operator ContainerSliceWeak<TInterfaces...>() {
+            container.instantiateAll<TDependenciesChain>(TypeList<TInterfaces...>{});
+            return ContainerSliceWeak<TInterfaces...>{ std::static_pointer_cast<Container>(container.shared_from_this()) };
+        }
+
+        template <typename... TInterfaces>
+        operator ContainerView<TInterfaces...>() {
+            container.instantiateAll<TDependenciesChain>(TypeList<TInterfaces...>{});
+            return ContainerView<TInterfaces...>{ std::static_pointer_cast<Container>(container.shared_from_this()) };
         }
 
         Container& container;
@@ -312,13 +299,13 @@ private:
         if constexpr (TRegisteredItem::Mapping::Lifetime == ItemLifetime::DI) {
             // use directly provided ctor arguments instead of the binded ones
             if constexpr (sizeof...(TArgs) > 0) {
-                if constexpr (std::is_constructible_v<typename TRegisteredItem::Mapping::Type, Container&, TArgs&&...>) {
-                    // hook into dependencies creation logic and ensure dependencies of those dependencies are created first
-                    DependenciesCtorHook<DependenciesChainNext> dependenciesCtorHook{ *this };
-                    return instantiate<TInterface>(item, dependenciesCtorHook, std::forward<TArgs>(args)...);
+                if constexpr (std::is_constructible_v<typename TRegisteredItem::Mapping::Type, std::shared_ptr<Container>, TArgs&&...>) {
+                    // hook into dependencies (basically liant::ContainerSlice) creation logic and ensure dependencies of those dependencies are created first
+                    ContainerSliceCtorHook<DependenciesChainNext> hook{ *this };
+                    return instantiate<TInterface>(item, hook, std::forward<TArgs>(args)...);
                 } else if constexpr (std::is_constructible_v<typename TRegisteredItem::Mapping::Type, TArgs&&...>) {
                     // item depends on nothing from DI container (it is a leaf of a dependencies tree) so it can be created right away
-                    return instantiate<TInterface>(item, *this, std::forward<TArgs>(args)...);
+                    return instantiateTrivial<TInterface>(item, std::forward<TArgs>(args)...);
                 } else {
                     static_assert(liant::Print<typename TRegisteredItem::Mapping::Type>,
                         "Cannot create an instance of a type you've registered within DI container. "
@@ -331,13 +318,13 @@ private:
             else {
                 return std::apply(
                     [this, &item]<typename... UArgs>(UArgs&&... args) -> TInterface& {
-                        if constexpr (std::is_constructible_v<typename TRegisteredItem::Mapping::Type, Container&, UArgs&&...>) {
-                            // hook into dependencies creation logic and ensure dependencies of those dependencies are created first
-                            DependenciesCtorHook<DependenciesChainNext> dependenciesCtorHook{ *this };
-                            return instantiate<TInterface>(item, dependenciesCtorHook, std::forward<UArgs>(args)...);
+                        if constexpr (std::is_constructible_v<typename TRegisteredItem::Mapping::Type, std::shared_ptr<Container>, UArgs&&...>) {
+                            // hook into dependencies (basically liant::ContainerSlice) creation logic and ensure dependencies of those dependencies are created first
+                            ContainerSliceCtorHook<DependenciesChainNext> hook{ *this };
+                            return instantiate<TInterface>(item, hook, std::forward<UArgs>(args)...);
                         } else if constexpr (std::is_constructible_v<typename TRegisteredItem::Mapping::Type, UArgs&&...>) {
                             // item depends on nothing from DI container (it is a leaf of a dependencies tree) so it can be created right away
-                            return instantiate<TInterface>(item, *this, std::forward<UArgs>(args)...);
+                            return instantiateTrivial<TInterface>(item, std::forward<UArgs>(args)...);
                         } else {
                             static_assert(liant::Print<typename TRegisteredItem::Mapping::Type, UArgs...>,
                                 "Cannot create an instance of a type you've registered within DI container. "
@@ -354,10 +341,19 @@ private:
         }
     }
 
-    // TDependenciesHolder may be either 'Container<...>' itself or 'Container<...>::DependenciesCtorHook'
-    template <typename TInterface, typename TRegisteredItem, typename TDependenciesHolder, typename... TArgs>
-    TInterface& instantiate(TRegisteredItem& item, TDependenciesHolder& dependenciesHolder, TArgs&&... args) {
-        TInterface& interface = item.template instantiate<TInterface>(dependenciesHolder, std::forward<TArgs>(args)...);
+    // TContainerSliceCtorHook may be either 'Container<...>' itself or 'Container<...>::ContainerSliceCtorHook'
+    template <typename TInterface, typename TRegisteredItem, typename TContainerSliceCtorHook, typename... TArgs>
+    TInterface& instantiate(TRegisteredItem& item, TContainerSliceCtorHook& hook, TArgs&&... args) {
+        TInterface& interface = item.template instantiate<TInterface>(hook, std::forward<TArgs>(args)...);
+        // order matters coz 'item.instantiate<TInterface>' may recursisevly instantiate its own dependencies (see 'instantiateAll' mechanism)
+        deleters.push_back(makeDeleter<TInterface>());
+
+        return interface;
+    }
+
+    template <typename TInterface, typename TRegisteredItem, typename... TArgs>
+    TInterface& instantiateTrivial(TRegisteredItem& item, TArgs&&... args) {
+        TInterface& interface = item.template instantiateTrivial<TInterface>(std::forward<TArgs>(args)...);
         // order matters coz 'item.instantiate<TInterface>' may recursisevly instantiate its own dependencies (see 'instantiateAll' mechanism)
         deleters.push_back(makeDeleter<TInterface>());
 
@@ -403,6 +399,43 @@ private:
     std::tuple<RegisteredItem<TTypeMappings>...> items;
     std::vector<DestroyItemFn> deleters;
     TBaseContainer baseContainer;
+};
+
+class EmptyContainer {
+public:
+    using RegisteredItems = TypeList<>;
+    using registered_items_type = RegisteredItems;
+
+    const EmptyContainer* operator->() const {
+        return this;
+    }
+
+    EmptyContainer* operator->() {
+        return this;
+    }
+
+    void resolveAll() {
+        // do nothing
+    }
+
+    template <typename TInterface, typename TDependenciesChain, typename... TArgs>
+    TInterface& resolveInternal(TArgs&&...) {
+        static_assert(liant::Print<TInterface>,
+            "You're trying to create or resolve an interface which isn't registered within DI container "
+            "(search 'liant::Print' in the compilation output for details)");
+    }
+
+    template <typename TInterface>
+    constexpr std::ptrdiff_t findItemIndex() {
+        return -1;
+    }
+
+    template <typename TInterface>
+    TInterface* findRaw() const {
+        static_assert(liant::Print<TInterface>,
+            "You're trying to find an interface which isn't registered within DI container "
+            "(search 'liant::Print' in the compilation output for details)");
+    }
 };
 
 template <typename TBaseContainer, typename... TTypeMappings>

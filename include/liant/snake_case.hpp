@@ -17,20 +17,19 @@ using container = Container<TBaseContainer, TTypeMappings...>;
 template <typename... TInterfaces>
 using container_slice = ContainerSlice<TInterfaces...>;
 
+template <typename... TInterfaces>
+using container_slice_weak = ContainerSliceWeak<TInterfaces...>;
+
+template <typename... TInterfaces>
+using container_view = ContainerView<TInterfaces...>;
+
 using empty_container = EmptyContainer;
 
 template <typename TTypeMapping>
 using registered_item = RegisteredItem<TTypeMapping>;
 
-template <typename... TInterfaces>
-using dependencies = Dependencies<TInterfaces...>;
-
 template <typename TType>
 using dependency = Dependency<TType>;
-
-template <typename TType>
-using pretty_dependency = PrettyDependency<TType>;
-
 
 template <typename T>
 using shared_ref = SharedRef<T>;

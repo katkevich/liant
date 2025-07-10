@@ -1,24 +1,33 @@
 #pragma once
 
-// no need to open liant:: namespace in order to define custom Pretty dependency
-// 'liantPrettyDependencyLookup' uses ADL in order to find correct Pretty dependency customization point
-#define LIANT_DEPENDENCY(Type, getterPrettyName)                          \
-    class LiantPrettyDependency_##Type : public liant::Dependency<Type> { \
-        template <typename... UTypes>                                     \
-        friend class Dependencies;                                        \
-                                                                          \
-        using Dependency<Type>::Dependency;                               \
-                                                                          \
-    public:                                                               \
-        Type& getterPrettyName() {                                        \
-            return dependency;                                            \
-        }                                                                 \
-        const Type& getterPrettyName() const {                            \
-            return dependency;                                            \
-        }                                                                 \
-    };                                                                    \
-                                                                          \
-    /* exploit ADL lookup */                                              \
-    auto liantPrettyDependencyLookup(liant::TypeIdentity<Type>) {         \
-        return liant::TypeIdentity<LiantPrettyDependency_##Type>{};       \
+// Provides a getter method with pretty name for your Interface while accessing it from DI container object
+//
+// LIANT_DEPENDENCY(HttpClient, httpClient)
+// ...
+// liant::ContainerView<HttpClient, ...> di;
+// di.httpClient();
+//
+// Note: LIANT_DEPENDENCY macro can be used from your namespace as well - no need to open liant:: namespace
+#define LIANT_DEPENDENCY(Interface, getterPrettyName)                                                   \
+    template <typename TContainer>                                                                      \
+    class LiantPrettyDependency_##Interface : public liant::Dependency<Interface> {                     \
+    public:                                                                                             \
+        Interface& getterPrettyName##Raw() {                                                            \
+            return static_cast<TContainer*>(this)->template resolveRaw<Interface>();                    \
+        }                                                                                               \
+        const Interface* getterPrettyName##Raw() const {                                                \
+            return static_cast<const TContainer*>(this)->template findRaw<Interface>();                 \
+        }                                                                                               \
+        liant::SharedRef<Interface> getterPrettyName() {                                                \
+            return static_cast<TContainer*>(this)->template resolve<Interface>();                       \
+        }                                                                                               \
+        liant::SharedPtr<Interface> getterPrettyName() const {                                          \
+            return static_cast<const TContainer*>(this)->template find<Interface>();                    \
+        }                                                                                               \
+    };                                                                                                  \
+                                                                                                        \
+    /* exploit ADL lookup */                                                                            \
+    template <typename TContainer>                                                                      \
+    auto liantPrettyDependencyLookup(liant::TypeIdentity<TContainer>, liant::TypeIdentity<Interface>) { \
+        return liant::TypeIdentity<LiantPrettyDependency_##Interface<TContainer>>{};                    \
     }

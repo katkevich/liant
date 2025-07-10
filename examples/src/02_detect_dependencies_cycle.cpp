@@ -8,21 +8,21 @@ struct Interface2 {};
 struct Interface3 {};
 
 struct Type1 : Interface1 {
-    Type1(liant::Dependencies<Interface3> di)
+    Type1(liant::ContainerView<Interface3> di)
         : di(di) {}
-    liant::Dependencies<Interface3> di;
+    liant::ContainerView<Interface3> di;
 };
 
 struct Type2 : Interface2 {
-    Type2(liant::Dependencies<Interface1> di)
+    Type2(liant::ContainerView<Interface1> di)
         : di(di) {}
-    liant::Dependencies<Interface1> di;
+    liant::ContainerView<Interface1> di;
 };
 
 struct Type3 : Interface3 {
-    Type3(liant::Dependencies<Interface2> di)
+    Type3(liant::ContainerView<Interface2> di)
         : di(di) {}
-    liant::Dependencies<Interface2> di;
+    liant::ContainerView<Interface2> di;
 };
 } // namespace example
 

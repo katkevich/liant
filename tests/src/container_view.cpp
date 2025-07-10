@@ -44,10 +44,10 @@ struct DerivedType1 : Interface1 {
 };
 
 struct DerivedType2 : Interface2 {
-    DerivedType2(liant::Dependencies<Interface1> di, std::string tagPrefix, std::string tagSuffix)
+    DerivedType2(liant::ContainerView<Interface1> di, std::string tagPrefix, std::string tagSuffix)
         : di(di)
         , tag(tagPrefix + tagSuffix) {}
-    DerivedType2(liant::Dependencies<Interface1> di, std::string tagPrefix, std::string tagSuffix, Stats& stats)
+    DerivedType2(liant::ContainerView<Interface1> di, std::string tagPrefix, std::string tagSuffix, Stats& stats)
         : di(di)
         , tag(tagPrefix + tagSuffix)
         , stats(&stats) {}
@@ -68,17 +68,17 @@ struct DerivedType2 : Interface2 {
         }
     }
 
-    liant::Dependencies<Interface1> di;
+    liant::ContainerView<Interface1> di;
     std::string tag;
     Stats* stats{};
 };
 
 struct Type3 {
-    Type3(liant::Dependencies<Interface2, Interface1> di, std::string tag)
+    Type3(liant::ContainerView<Interface2, Interface1> di, std::string tag)
         : di(di)
         , tag(tag) {}
 
-    Type3(liant::Dependencies<Interface2, Interface1> di, std::string tag, Stats& stats)
+    Type3(liant::ContainerView<Interface2, Interface1> di, std::string tag, Stats& stats)
         : di(di)
         , tag(tag)
         , stats(&stats) {}
@@ -95,7 +95,7 @@ struct Type3 {
         }
     }
 
-    liant::Dependencies<Interface2, Interface1> di;
+    liant::ContainerView<Interface2, Interface1> di;
     std::string tag;
     Stats* stats{};
 };
@@ -130,14 +130,13 @@ TEST_CASE("ensure LIANT_DEPENDENCY macro defines pretty getters for a dependency
     Type3& type3 = container->resolveRaw<Type3>();
 
     // note: pretty getter 'Interface1_PrettyGetter'
-    Interface1& interface1 = type3.di.Interface1_PrettyGetter();
+    Interface1& interface1 = type3.di.Interface1_PrettyGetterRaw();
     REQUIRE_EQ(interface1.getTag(), "arg1");
 
     // note: pretty getter 'Interface2_PrettyGetter'
-    Interface2& interface2 = type3.di.Interface2_PrettyGetter();
+    Interface2& interface2 = type3.di.Interface2_PrettyGetterRaw();
     REQUIRE_EQ(interface2.getTag(), "arg2");
 }
-
 
 TEST_CASE("ensure destroying order is opposite to the creation order of the dependencies") {
     Stats stats;
@@ -267,7 +266,7 @@ TEST_CASE("ensure aggregates can be created as is without explicit ctor") {
     };
 
     struct WithDependencies {
-        liant::Dependencies<NoDependencies> di;
+        liant::ContainerView<NoDependencies> di;
         Payload& payloadRef;
     };
 
@@ -378,4 +377,5 @@ TEST_CASE("ensure liant::SharedRef (never empty) keeps container alive") {
     // note: container is finally destroyed
     REQUIRE(weakContainer.expired());
 }
+
 } // namespace liant::test

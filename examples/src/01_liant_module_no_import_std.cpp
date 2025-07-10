@@ -17,7 +17,7 @@ struct Type1 {
 LIANT_DEPENDENCY(Type1, prettyCustomGetType1)
 
 struct Type2 {
-    liant::Dependencies<Type1> di;
+    liant::ContainerView<Type1> di;
 };
 } // namespace example
 

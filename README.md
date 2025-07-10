@@ -16,14 +16,14 @@ import liant;
 struct Interface1 {};
 struct Type1 : Interface1 {};
 struct Type2 {
-    // injection via ctor ('liant::Dependencies<...>' should be first argument)
-    Type2(liant::Dependencies<Interface1> di)
+    // injection via ctor ('liant::ContainerView<...>' should be first argument)
+    Type2(liant::ContainerView<Interface1> di)
         : di(di) {}
-    liant::Dependencies<Interface1> di;
+    liant::ContainerView<Interface1> di;
 };
 struct Type3 {
-    // injection via aggregate initialization ('liant::Dependencies<...>' should be first field)
-    liant::Dependencies<Interface1, Type2> di;
+    // injection via aggregate initialization ('liant::ContainerView<...>' should be first field)
+    liant::ContainerView<Interface1, Type2> di;
     std::string arg;
 
     void postCreate() const { std::println("Type3::postCreate"); }
@@ -53,7 +53,7 @@ int main()
 * Dependencies are resolved and injected lazily and automatically.
 * Initialization and destruction order management. `postCreate`/`preDestroy` customization points.
 * Ability to instantiate all dependencies at once, automatically resolving their order, or to instantiate them one by one.
-* You can "include" one container as a base for another, so that dependencies from base container are reused by child container.
+* You can "include" one container (or its slice) as a base for another, so that dependencies from base container are reused by child container.
 * Bind concrete types to interfaces or simply register types as-is.
 * **Multiple Distribution Formats:**
     * **Header-only version:** For traditional `#include`-based usage.

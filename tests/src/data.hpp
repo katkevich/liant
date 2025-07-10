@@ -1,5 +1,5 @@
 #pragma once
-#include "liant/dependency.hpp"
+#include "liant/container_view.hpp"
 #include <string>
 
 namespace liant::test {
@@ -85,26 +85,26 @@ namespace linked {
 struct TrivialType1 {};
 struct Interface1 {};
 struct DerivedType1 : Interface1 {
-    DerivedType1(liant::Dependencies<TrivialType1> di)
+    DerivedType1(liant::ContainerView<TrivialType1> di)
         : di(di) {}
-    liant::Dependencies<TrivialType1> di;
+    liant::ContainerView<TrivialType1> di;
 };
 
 struct TrivialType2 {};
 struct Interface2 {};
 struct DerivedType2 : Interface2 {
-    DerivedType2(liant::Dependencies<Interface1, TrivialType2> di)
+    DerivedType2(liant::ContainerView<Interface1, TrivialType2> di)
         : di(di) {}
-    liant::Dependencies<Interface1, TrivialType2> di;
+    liant::ContainerView<Interface1, TrivialType2> di;
 };
 
 struct TrivialType34 {};
 struct Interface3 {};
 struct Interface4 {};
 struct DerivedType34 : Interface3, Interface4 {
-    DerivedType34(liant::Dependencies<Interface1, Interface2, TrivialType34> di)
+    DerivedType34(liant::ContainerView<Interface1, Interface2, TrivialType34> di)
         : di(di) {}
-    liant::Dependencies<Interface1, Interface2, TrivialType34> di;
+    liant::ContainerView<Interface1, Interface2, TrivialType34> di;
 };
 } // namespace linked
 
