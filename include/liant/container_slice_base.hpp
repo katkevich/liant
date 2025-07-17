@@ -35,9 +35,24 @@ template <>
 struct ContainerPtr<ContainerPtrKind::RawRef> {
     liant::ContainerBase* inner{};
 
+    ContainerPtr() = default;
+    ContainerPtr(const ContainerPtr&) = default;
+    ContainerPtr(ContainerPtr&&) = default;
+    ContainerPtr& operator=(const ContainerPtr&) = default;
+    ContainerPtr& operator=(ContainerPtr&&) = default;
+
+    template <ContainerPtrKind PtrKindOther>
+        requires(PtrKindOther == ContainerPtrKind::Shared)
+    ContainerPtr(const ContainerPtr<PtrKindOther>& containerPtr)
+        : inner(containerPtr.inner.get()) {}
+
     ContainerPtr(std::shared_ptr<ContainerBase> container)
         : inner(container.get()) {}
-    std::shared_ptr<ContainerBase> shared() const {
+
+    ContainerBase* raw() const {
+        return inner;
+    }
+    std::shared_ptr<ContainerBase> owner() const {
         return inner->shared_from_this();
     }
 };
@@ -46,9 +61,24 @@ template <>
 struct ContainerPtr<ContainerPtrKind::Shared> {
     std::shared_ptr<ContainerBase> inner{};
 
+    ContainerPtr() = default;
+    ContainerPtr(const ContainerPtr&) = default;
+    ContainerPtr(ContainerPtr&&) = default;
+    ContainerPtr& operator=(const ContainerPtr&) = default;
+    ContainerPtr& operator=(ContainerPtr&&) = default;
+
+    template <ContainerPtrKind PtrKindOther>
+        requires(PtrKindOther == ContainerPtrKind::RawRef)
+    ContainerPtr(const ContainerPtr<PtrKindOther>& containerPtr)
+        : inner(containerPtr.owner()) {}
+
     ContainerPtr(std::shared_ptr<ContainerBase> container)
         : inner(std::move(container)) {}
-    const std::shared_ptr<ContainerBase>& shared() const {
+
+    ContainerBase* raw() const {
+        return inner.get();
+    }
+    const std::shared_ptr<ContainerBase>& owner() const {
         return inner;
     }
 };
@@ -58,12 +88,12 @@ struct VTable {
     auto (*findRawErased)(const VTable<TInterface>& self, liant::ContainerBase& container) -> TInterface*;
     auto (*resolveRawErased)(const VTable<TInterface>& self, liant::ContainerBase& container) -> TInterface&;
 
-    template<typename TContainer>
+    template <typename TContainer>
     TInterface* findRaw(TContainer& container) const {
         return container.template findRaw<TInterface>();
     }
 
-    template<typename TContainer>
+    template <typename TContainer>
     TInterface& resolveRaw(TContainer& container) const {
         return container.template resolveRaw<TInterface>();
     }
@@ -84,8 +114,11 @@ static constexpr std::tuple<VTable<TInterfaces>...> vtableFor = { VTable<TInterf
 // common base class for liant::ContainerSlice (owning) & liant::ContainerView (non-owning)
 template <ContainerPtrKind PtrKind, typename... TInterfaces>
 class ContainerSliceBase : public liant::PrettyDependency<ContainerSliceBase<PtrKind, TInterfaces...>, TInterfaces>... {
-    template <typename TBaseContainer, typename... TTypeMappings>
+    template <typename UBaseContainer, typename... UTypeMappings>
     friend class liant::Container;
+
+    template <ContainerPtrKind PtrKindOther, typename... UInterfaces>
+    friend class ContainerSliceBase;
 
     const std::tuple<VTable<TInterfaces>...>* vtable{};
 
@@ -93,11 +126,20 @@ public:
     template <typename UBaseContainer, typename... UTypeMappings>
     ContainerSliceBase(const std::shared_ptr<Container<UBaseContainer, UTypeMappings...>>& container)
         : vtable(std::addressof(vtableFor<Container<UBaseContainer, UTypeMappings...>, TInterfaces...>))
-        , container(container) {}
+        , container(container) {
+        resolveAll();
+    }
     template <typename UBaseContainer, typename... UTypeMappings>
     ContainerSliceBase(std::shared_ptr<Container<UBaseContainer, UTypeMappings...>>&& container)
         : vtable(std::addressof(vtableFor<Container<UBaseContainer, UTypeMappings...>, TInterfaces...>))
-        , container(std::move(container)) {}
+        , container(std::move(container)) {
+        resolveAll();
+    }
+
+    template <ContainerPtrKind PtrKindOther>
+    ContainerSliceBase(const ContainerSliceBase<PtrKindOther, TInterfaces...>& containerSlice)
+        : vtable(containerSlice.vtable)
+        , container(containerSlice.container) {}
 
     ContainerSliceBase(const ContainerSliceBase&) = default;
     ContainerSliceBase(ContainerSliceBase&&) = default;
@@ -113,14 +155,14 @@ public:
             "ContainerView<...> (search 'liant::Print' in the compilation output for details)");
 
         const VTable<TInterface>& vtableItem = std::get<VTable<TInterface>>(*vtable);
-        return (*vtableItem.findRawErased)(vtableItem, *container.inner);
+        return (*vtableItem.findRawErased)(vtableItem, *container.raw());
     }
 
     // trying to find already created instance registered 'as TInterface'
     // returned fat 'SharedRef' protects underlying 'Container' from being destroyed so use 'SharedRef' with caution (you don't really want block 'Container' deletion)
     template <typename TInterface>
     SharedPtr<TInterface> find() const {
-        return SharedPtr<TInterface>(findRaw<TInterface>(), container.shared());
+        return SharedPtr<TInterface>(findRaw<TInterface>(), container.owner());
     }
 
     // resolve an instance of type registered 'as TInterface'
@@ -131,7 +173,7 @@ public:
     template <typename TInterface>
     TInterface& resolveRaw() {
         const VTable<TInterface>& vtableItem = std::get<VTable<TInterface>>(*vtable);
-        return (*vtableItem.resolveRawErased)(vtableItem, *container.inner);
+        return (*vtableItem.resolveRawErased)(vtableItem, *container.raw());
     }
 
     // resolve an instance of type registered 'as TInterface'
@@ -145,11 +187,13 @@ public:
             "Interface you're trying to resolve is missing from 'liant::ContainerSlice<...>' / "
             "'liant::ContainerView<...>' (search 'liant::Print' in the compilation output for details)");
 
-        return SharedRef<TInterface>(resolveRaw<TInterface>(), container.shared());
+        return SharedRef<TInterface>(resolveRaw<TInterface>(), container.owner());
     }
 
     void resolveAll() {
-        container.inner->resolveAll();
+        TypeList<TInterfaces...>::forEach([&]<typename TInterface>() { //
+            resolveRaw<TInterface>();
+        });
     }
 
 private:

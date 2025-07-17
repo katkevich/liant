@@ -378,4 +378,59 @@ TEST_CASE("ensure liant::SharedRef (never empty) keeps container alive") {
     REQUIRE(weakContainer.expired());
 }
 
+TEST_CASE("should be able to create liant::ContainerView from liant::ContainerSlice") {
+    // Interface1/Interface2/Type3 will be resolved automatically (liant::ContainerSlice ctor will do that)
+    // clang-format off
+    auto containerSlice = liant::ContainerSlice<Interface1, Interface2, Type3>(liant::makeContainer(
+        liant::registerInstanceOf<DerivedType1>().as<Interface1>().bindArgs("arg1"),
+        liant::registerInstanceOf<DerivedType2>().as<Interface2>().bindArgs("ar", "g2"),
+        liant::registerInstanceOf<Type3>().bindArgs("arg3")
+    ));
+    // clang-format on
+
+    // ContainerSlice DO hold a strong pointer to container
+    REQUIRE_EQ(containerSlice.useCount(), 1);
+
+    const liant::ContainerView<Interface1, Interface2, Type3> containerView(containerSlice);
+    // ContainerView ain't holding a strong pointer to container
+    REQUIRE_EQ(containerSlice.useCount(), 1);
+
+    Interface1* interface1 = containerView.findRaw<Interface1>();
+    Interface2& interface2 = containerView.Interface2_PrettyGetterRaw();
+
+    // non-lazy ContainerView is always resolved at construction automatically
+    REQUIRE(interface1);
+
+    REQUIRE_EQ(interface1->getTag(), "arg1");
+    REQUIRE_EQ(interface2.getTag(), "arg2");
+}
+
+TEST_CASE("should be able to create liant::ContainerSlice from liant::ContainerView") {
+    // clang-format off
+    auto container = liant::makeContainer(
+        liant::registerInstanceOf<DerivedType1>().as<Interface1>().bindArgs("arg1"),
+        liant::registerInstanceOf<DerivedType2>().as<Interface2>().bindArgs("ar", "g2"),
+        liant::registerInstanceOf<Type3>().bindArgs("arg3")
+    );
+    // clang-format on
+
+    // Interface1/Interface2/Type3 will be resolved automatically (liant::ContainerView ctor will do that)
+    liant::ContainerView<Interface1, Interface2, Type3> containerView(container);
+    // ContainerView ain't holding a strong pointer to container
+    REQUIRE_EQ(container.use_count(), 1);
+
+    const liant::ContainerSlice<Interface1, Interface2, Type3> containerSlice(containerView);
+    // ContainerSlice DO hold a strong pointer to container
+    REQUIRE_EQ(container.use_count(), 2);
+
+    Interface1* interface1 = containerView.findRaw<Interface1>();
+    Interface2& interface2 = containerView.Interface2_PrettyGetterRaw();
+
+    // non-lazy ContainerView is always resolved at construction automatically
+    REQUIRE(interface1);
+
+    REQUIRE_EQ(interface1->getTag(), "arg1");
+    REQUIRE_EQ(interface2.getTag(), "arg2");
+}
+
 } // namespace liant::test

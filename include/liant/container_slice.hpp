@@ -20,6 +20,10 @@ public:
     explicit operator bool() const {
         return static_cast<bool>(this->container.inner);
     }
+
+    auto useCount() const {
+        return this->container.owner().use_count();
+    }
 };
 
 template <typename... TInterfaces>
@@ -37,5 +41,4 @@ private:
     // underlying container
     std::weak_ptr<ContainerBase> weakContainer;
 };
-
 } // namespace liant

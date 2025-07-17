@@ -26,9 +26,12 @@ template <typename T>
 class SharedRef {
     template <typename UBaseContainer, typename... UTypeMappings>
     friend class Container;
-    
-    template <details::ContainerPtrKind PtrKind, typename... TInterfaces>
+
+    template <details::ContainerPtrKind PtrKindOther, typename... UInterfaces>
     friend class details::ContainerSliceBase;
+
+    template <typename U>
+    class SharedPtr;
 
     template <typename U>
     friend class WeakPtr;
@@ -57,22 +60,19 @@ public:
         swap(first.owner, second.owner);
     }
 
-    T& get() {
+    T& get() const {
         return *ptr;
     }
 
-    const T& get() const {
-        return const_cast<SharedRef*>(this)->get();
-    }
-
-    T* operator->() {
+    T* operator->() const {
         return get();
     }
 
-    const T* operator->() const {
-        return const_cast<SharedRef*>(this)->get();
+    T& operator*() const {
+        return *get();
     }
 
+private:
     friend bool operator==(const SharedRef& lhs, const SharedRef& rhs) {
         return lhs.ptr == rhs.ptr;
     }
@@ -107,6 +107,14 @@ class SharedPtr {
         , owner(ptr ? std::move(owner) : nullptr) {}
 
 public:
+    SharedPtr(const SharedRef<T>& other)
+        : ptr(other.ptr)
+        , owner(other.owner) {}
+
+    SharedPtr(SharedRef<T>&& other)
+        : ptr(other.ptr)
+        , owner(std::move(other.owner)) {}
+
     SharedPtr(const SharedPtr& other)
         : ptr(other.ptr)
         , owner(other.owner) {}
@@ -130,7 +138,7 @@ public:
         owner.reset();
     }
 
-    T* get() {
+    T* get() const {
         if (owner) {
             return ptr;
         } else {
@@ -138,22 +146,23 @@ public:
         }
     }
 
-    const T* get() const {
-        return const_cast<SharedPtr*>(this)->get();
-    }
-
-    T* operator->() {
+    T* operator->() const {
         return get();
     }
 
-    const T* operator->() const {
-        return const_cast<SharedPtr*>(this)->get();
+    T& operator*() const {
+        return *get();
     }
 
     explicit operator bool() const {
         return owner && ptr;
     }
 
+    SharedRef<T> toSharedRef() const {
+        return SharedRef<T>(*ptr, owner);
+    }
+
+private:
     friend bool operator==(const SharedPtr& lhs, const SharedPtr& rhs) {
         return lhs.ptr == rhs.ptr;
     }
@@ -216,6 +225,7 @@ public:
         return owner.lock() != nullptr && ptr != nullptr;
     }
 
+private:
     friend bool operator==(const WeakPtr& lhs, const WeakPtr& rhs) {
         return lhs.ptr == rhs.ptr;
     }
@@ -229,4 +239,78 @@ private:
     std::weak_ptr<const ContainerBase> owner{};
 };
 
+template <typename T>
+class NotNull;
+
+template <typename T>
+class NotNull<T*> {
+public:
+    NotNull(T& ref)
+        : ptr(std::addressof(ref)) {}
+
+    T* operator->() const {
+        return ptr;
+    }
+
+    T& operator*() const {
+        return *ptr;
+    }
+
+    operator T&() {
+        return *ptr;
+    }
+
+    operator T*&() {
+        return ptr;
+    }
+
+    operator T* const&() const {
+        return ptr;
+    }
+
+private:
+    T* ptr{};
+};
+
+template <typename T>
+class NotNull<SharedPtr<T>> {
+public:
+    NotNull(const SharedRef<T>& ref)
+        : ptr(ref) {}
+    NotNull(SharedRef<T>&& ref)
+        : ptr(std::move(ref)) {}
+
+    T* operator->() const {
+        return ptr.get();
+    }
+
+    T& operator*() const {
+        return *ptr;
+    }
+
+    operator SharedRef<T>() {
+        return ptr.toSharedRef();
+    }
+
+    operator SharedPtr<T>&() {
+        return ptr;
+    }
+
+    operator SharedPtr<T> const&() const {
+        return ptr;
+    }
+
+
+private:
+    friend bool operator==(const NotNull& lhs, const NotNull& rhs) {
+        return lhs.ptr == rhs.ptr;
+    }
+
+    friend bool operator!=(const NotNull& lhs, const NotNull& rhs) {
+        return !(lhs == rhs);
+    }
+
+private:
+    SharedPtr<T> ptr{};
+};
 } // namespace liant

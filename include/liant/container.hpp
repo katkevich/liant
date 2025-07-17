@@ -248,19 +248,16 @@ private:
     struct ContainerSliceCtorHook {
         template <typename... TInterfaces>
         operator ContainerSlice<TInterfaces...>() {
-            container.instantiateAll<TDependenciesChain>(TypeList<TInterfaces...>{});
             return ContainerSlice<TInterfaces...>{ std::static_pointer_cast<Container>(container.shared_from_this()) };
         }
 
         template <typename... TInterfaces>
         operator ContainerSliceWeak<TInterfaces...>() {
-            container.instantiateAll<TDependenciesChain>(TypeList<TInterfaces...>{});
             return ContainerSliceWeak<TInterfaces...>{ std::static_pointer_cast<Container>(container.shared_from_this()) };
         }
 
         template <typename... TInterfaces>
         operator ContainerView<TInterfaces...>() {
-            container.instantiateAll<TDependenciesChain>(TypeList<TInterfaces...>{});
             return ContainerView<TInterfaces...>{ std::static_pointer_cast<Container>(container.shared_from_this()) };
         }
 
