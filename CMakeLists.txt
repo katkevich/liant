@@ -33,7 +33,7 @@ set(LIANT_HEADERS
     include/liant/liant.hpp
     include/liant/container.hpp
     include/liant/container_slice.hpp
-    include/liant/container_slice_base.hpp
+    include/liant/container_slice_impl.hpp
     include/liant/container_view.hpp
     include/liant/ptr.hpp
     include/liant/tuple.hpp

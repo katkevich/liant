@@ -1,5 +1,5 @@
 #pragma once
-#include "liant/container_slice_base.hpp"
+#include "liant/container_slice_impl.hpp"
 #include "liant/export_macro.hpp"
 
 #ifndef LIANT_MODULE
@@ -13,8 +13,8 @@ namespace liant {
 
 // subset of another type-erased DI container (non-owning reference) - basically non-owning version of liant::ContainerSlice
 template <typename... TInterfaces>
-class ContainerView : public details::ContainerSliceBase<details::ContainerPtrKind::RawRef, TInterfaces...> {
+class ContainerView : public details::ContainerSliceImpl<details::ContainerPtrKind::RawRef, TInterfaces...> {
 public:
-    using details::ContainerSliceBase<details::ContainerPtrKind::RawRef, TInterfaces...>::ContainerSliceBase;
+    using details::ContainerSliceImpl<details::ContainerPtrKind::RawRef, TInterfaces...>::ContainerSliceImpl;
 };
 } // namespace liant

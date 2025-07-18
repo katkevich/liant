@@ -1,5 +1,5 @@
 #pragma once
-#include "liant/container_slice_base.hpp"
+#include "liant/container_slice_impl.hpp"
 #include "liant/export_macro.hpp"
 
 #ifndef LIANT_MODULE
@@ -13,9 +13,9 @@ namespace liant {
 
 // subset of another type-erased DI container (shared ownership)
 template <typename... TInterfaces>
-class ContainerSlice : public details::ContainerSliceBase<details::ContainerPtrKind::Shared, TInterfaces...> {
+class ContainerSlice : public details::ContainerSliceImpl<details::ContainerPtrKind::Shared, TInterfaces...> {
 public:
-    using details::ContainerSliceBase<details::ContainerPtrKind::Shared, TInterfaces...>::ContainerSliceBase;
+    using details::ContainerSliceImpl<details::ContainerPtrKind::Shared, TInterfaces...>::ContainerSliceImpl;
 
     explicit operator bool() const {
         return static_cast<bool>(this->container.inner);

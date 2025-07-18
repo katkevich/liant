@@ -99,8 +99,8 @@ struct VTable {
     }
 };
 
-// MSVC compiler (19.38) doesn't like it to be defined inside ContainerSliceBase class
-// So unfortunately, we're forced to move these guts out of ContainerSliceBase class scope
+// MSVC compiler (19.38) doesn't like it to be defined inside ContainerSliceImpl class
+// So unfortunately, we're forced to move these guts out of ContainerSliceImpl class scope
 template <typename TContainer, typename... TInterfaces>
 static constexpr std::tuple<VTable<TInterfaces>...> vtableFor = { VTable<TInterfaces>{
     [](const VTable<TInterfaces>& self, ContainerBase& container) -> TInterfaces* {
@@ -113,38 +113,38 @@ static constexpr std::tuple<VTable<TInterfaces>...> vtableFor = { VTable<TInterf
 
 // common base class for liant::ContainerSlice (owning) & liant::ContainerView (non-owning)
 template <ContainerPtrKind PtrKind, typename... TInterfaces>
-class ContainerSliceBase : public liant::PrettyDependency<ContainerSliceBase<PtrKind, TInterfaces...>, TInterfaces>... {
+class ContainerSliceImpl : public liant::PrettyDependency<ContainerSliceImpl<PtrKind, TInterfaces...>, TInterfaces>... {
     template <typename UBaseContainer, typename... UTypeMappings>
     friend class liant::Container;
 
     template <ContainerPtrKind PtrKindOther, typename... UInterfaces>
-    friend class ContainerSliceBase;
+    friend class ContainerSliceImpl;
 
     const std::tuple<VTable<TInterfaces>...>* vtable{};
 
 public:
     template <typename UBaseContainer, typename... UTypeMappings>
-    ContainerSliceBase(const std::shared_ptr<Container<UBaseContainer, UTypeMappings...>>& container)
+    ContainerSliceImpl(const std::shared_ptr<Container<UBaseContainer, UTypeMappings...>>& container)
         : vtable(std::addressof(vtableFor<Container<UBaseContainer, UTypeMappings...>, TInterfaces...>))
         , container(container) {
         resolveAll();
     }
     template <typename UBaseContainer, typename... UTypeMappings>
-    ContainerSliceBase(std::shared_ptr<Container<UBaseContainer, UTypeMappings...>>&& container)
+    ContainerSliceImpl(std::shared_ptr<Container<UBaseContainer, UTypeMappings...>>&& container)
         : vtable(std::addressof(vtableFor<Container<UBaseContainer, UTypeMappings...>, TInterfaces...>))
         , container(std::move(container)) {
         resolveAll();
     }
 
     template <ContainerPtrKind PtrKindOther>
-    ContainerSliceBase(const ContainerSliceBase<PtrKindOther, TInterfaces...>& containerSlice)
+    ContainerSliceImpl(const ContainerSliceImpl<PtrKindOther, TInterfaces...>& containerSlice)
         : vtable(containerSlice.vtable)
         , container(containerSlice.container) {}
 
-    ContainerSliceBase(const ContainerSliceBase&) = default;
-    ContainerSliceBase(ContainerSliceBase&&) = default;
-    ContainerSliceBase& operator=(const ContainerSliceBase&) = default;
-    ContainerSliceBase& operator=(ContainerSliceBase&&) = default;
+    ContainerSliceImpl(const ContainerSliceImpl&) = default;
+    ContainerSliceImpl(ContainerSliceImpl&&) = default;
+    ContainerSliceImpl& operator=(const ContainerSliceImpl&) = default;
+    ContainerSliceImpl& operator=(ContainerSliceImpl&&) = default;
 
     // trying to find already created instance registered 'as TInterface'
     // the unsafe raw pointer is being returned here so make sure it doesn't outlive the underlying 'Container'
@@ -209,11 +209,11 @@ private:
         return this->resolveRaw();
     }
 
-    const ContainerSliceBase* operator->() const {
+    const ContainerSliceImpl* operator->() const {
         return this;
     }
 
-    ContainerSliceBase* operator->() {
+    ContainerSliceImpl* operator->() {
         return this;
     }
 

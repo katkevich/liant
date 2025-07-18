@@ -13,7 +13,7 @@ namespace details {
 enum class ContainerPtrKind;
 
 template <ContainerPtrKind PtrKind, typename... TInterfaces>
-class ContainerSliceBase;
+class ContainerSliceImpl;
 } // namespace details
 
 class ContainerBase;
@@ -28,7 +28,7 @@ class SharedRef {
     friend class Container;
 
     template <details::ContainerPtrKind PtrKindOther, typename... UInterfaces>
-    friend class details::ContainerSliceBase;
+    friend class details::ContainerSliceImpl;
 
     template <typename U>
     class SharedPtr;
@@ -97,7 +97,7 @@ class SharedPtr {
     friend class Container;
 
     template <details::ContainerPtrKind PtrKind, typename... TInterfaces>
-    friend class details::ContainerSliceBase;
+    friend class details::ContainerSliceImpl;
 
     template <typename U>
     friend class WeakPtr;
