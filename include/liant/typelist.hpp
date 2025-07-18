@@ -27,6 +27,11 @@ struct TypeList {
         return (std::is_same_v<T, Ts> || ...);
     }
 
+    template <typename... Us>
+    static constexpr bool containsAll() {
+        return (TypeList<Ts...>::template contains<Us>() && ...);
+    }
+
     template <typename TTypePredicate>
     static constexpr std::ptrdiff_t find(TTypePredicate pred) {
         if constexpr (sizeof...(Ts) > 0) {
@@ -72,6 +77,13 @@ private:
         }
     }
 };
+
+template <typename TSubset, typename TSet>
+struct IsSubsetOf;
+
+template <typename... Ts, typename... Us>
+struct IsSubsetOf<TypeList<Ts...>, TypeList<Us...>> : std::bool_constant<TypeList<Us...>::template containsAll<Ts...>()> {};
+
 
 template <typename TTypeList, typename... Us>
 struct TypeListAppend;
