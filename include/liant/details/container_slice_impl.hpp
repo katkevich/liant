@@ -1,8 +1,8 @@
 #pragma once
 #include "liant/container.hpp"
 #include "liant/details/container_ptr.hpp"
-#include "liant/details/container_settings.hpp"
-#include "liant/details/container_vtable.hpp"
+#include "liant/details/container_slice_settings.hpp"
+#include "liant/details/container_slice_vtable.hpp"
 
 #ifndef LIANT_MODULE
 #include <cstring>

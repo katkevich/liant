@@ -1,6 +1,6 @@
 #pragma once
 #include "liant/container.hpp"
-#include "liant/details/container_settings.hpp"
+#include "liant/details/container_slice_settings.hpp"
 
 #ifndef LIANT_MODULE
 #include <memory>
