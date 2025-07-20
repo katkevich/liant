@@ -75,6 +75,24 @@ public:
         }
     }
 
+    template <typename UTraits>
+    ContainerSliceImpl(const ContainerSliceImpl<UTraits, TInterfaces...>& other)
+        : vtable(other.vtable)
+        , container(other.container) {
+        if constexpr (TTraits::Resolve == ResolveMode::Ctor && UTraits::Resolve == ResolveMode::Lazy) {
+            resolveAllChecked();
+        }
+    }
+
+    template <typename UTraits>
+    ContainerSliceImpl(ContainerSliceImpl<UTraits, TInterfaces...>&& other)
+        : vtable(std::move(other.vtable))
+        , container(std::move(other.container)) {
+        if constexpr (TTraits::ResolveMode == ResolveMode::Ctor && UTraits::ResolveMode == ResolveMode::Lazy) {
+            resolveAllChecked();
+        }
+    }
+
     template <typename UTraits, typename... UInterfaces>
         requires liant::IsSubsetOf<TypeList<TInterfaces...>, TypeList<UInterfaces...>>::value
     ContainerSliceImpl(const ContainerSliceImpl<UTraits, UInterfaces...>& other)
