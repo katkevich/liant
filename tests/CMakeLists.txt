@@ -17,6 +17,7 @@ add_executable(test_liant
     src/container_slice_as_base_container.cpp
     src/container_view.cpp
     src/container_slice_ctor.cpp
+    src/container_slice_lazy_ctor.cpp
 )
 
 target_link_libraries(test_liant liant::liant doctest::doctest_with_main)

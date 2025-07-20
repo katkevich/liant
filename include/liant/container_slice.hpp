@@ -1,5 +1,5 @@
 #pragma once
-#include "liant/container_slice_impl.hpp"
+#include "liant/details/container_slice_impl.hpp"
 #include "liant/export_macro.hpp"
 
 #ifndef LIANT_MODULE
@@ -13,32 +13,52 @@ namespace liant {
 
 // subset of another type-erased DI container (shared ownership)
 template <typename... TInterfaces>
-class ContainerSlice : public details::ContainerSliceImpl<details::ContainerPtrKind::Shared, TInterfaces...> {
+class ContainerSlice : public details::ContainerSliceImpl<details::SharedOwnership, TInterfaces...> {
 public:
-    using details::ContainerSliceImpl<details::ContainerPtrKind::Shared, TInterfaces...>::ContainerSliceImpl;
+    using details::ContainerSliceImpl<details::SharedOwnership, TInterfaces...>::ContainerSliceImpl;
 
     explicit operator bool() const {
-        return static_cast<bool>(this->container.inner);
+        return this->container.operator bool();
     }
-
     auto useCount() const {
-        return this->container.owner().use_count();
+        return this->container.asShared().use_count();
     }
 };
 
+// subset of another type-erased DI container (shared ownership, no automatic resolving upon the construction)
 template <typename... TInterfaces>
-class ContainerSliceWeak {
+class ContainerSliceLazy : public details::ContainerSliceImpl<details::SharedOwnershipLazy, TInterfaces...> {
 public:
-    template <typename UBaseContainer, typename... UTypeMappings>
-    ContainerSliceWeak(std::weak_ptr<Container<UBaseContainer, UTypeMappings...>> weakContainer)
-        : weakContainer(std::move(weakContainer)) {}
+    using details::ContainerSliceImpl<details::SharedOwnershipLazy, TInterfaces...>::ContainerSliceImpl;
+
+    explicit operator bool() const {
+        return this->container.operator bool();
+    }
+    auto useCount() const {
+        return this->container.asShared().use_count();
+    }
+};
+
+// subset of another type-erased DI container (weak ownership)
+template <typename... TInterfaces>
+class ContainerSliceWeak : private details::ContainerSliceImpl<details::WeakOwnership, TInterfaces...> {
+public:
+    using details::ContainerSliceImpl<details::WeakOwnership, TInterfaces...>::ContainerSliceImpl;
 
     ContainerSlice<TInterfaces...> lock() const {
-        return ContainerSlice<TInterfaces...>(weakContainer.lock());
+        return ContainerSlice<TInterfaces...>(*this);
     }
+};
 
-private:
-    // underlying container
-    std::weak_ptr<ContainerBase> weakContainer;
+
+// subset of another type-erased DI container (weak ownership, no automatic resolving upon the construction)
+template <typename... TInterfaces>
+class ContainerSliceWeakLazy : private details::ContainerSliceImpl<details::WeakOwnershipLazy, TInterfaces...> {
+public:
+    using details::ContainerSliceImpl<details::WeakOwnershipLazy, TInterfaces...>::ContainerSliceImpl;
+
+    ContainerSliceLazy<TInterfaces...> lock() const {
+        return ContainerSliceLazy<TInterfaces...>(*this);
+    }
 };
 } // namespace liant

@@ -25,4 +25,22 @@
     template <typename TContainer>                                                                                     \
     auto liantPrettyDependencyLookup(liant::TypeIdentity<TContainer>, liant::TypeIdentity<Interface>) {                \
         return liant::TypeIdentity<LiantPrettyDependency_##Interface<TContainer>>{};                                   \
+    }                                                                                                                  \
+                                                                                                                       \
+    /* PrettyDependency for lazy ContainerSliceLazy/ContainerViewLazy (no resolving on construction) */                \
+    template <typename TContainer>                                                                                     \
+    class LiantPrettyDependencyLazy_##Interface : public liant::Dependency<Interface> {                                \
+    public:                                                                                                            \
+        Interface& getterPrettyName##Raw() {                                                                           \
+            return static_cast<TContainer*>(this)->template resolveRaw<Interface>();                                   \
+        }                                                                                                              \
+        liant::SharedRef<Interface> getterPrettyName() {                                                               \
+            return static_cast<TContainer*>(this)->template resolve<Interface>();                                      \
+        }                                                                                                              \
+    };                                                                                                                 \
+                                                                                                                       \
+    /* exploit ADL lookup */                                                                                           \
+    template <typename TContainer>                                                                                     \
+    auto liantPrettyDependencyLazyLookup(liant::TypeIdentity<TContainer>, liant::TypeIdentity<Interface>) {            \
+        return liant::TypeIdentity<LiantPrettyDependencyLazy_##Interface<TContainer>>{};                               \
     }

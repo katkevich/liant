@@ -140,11 +140,19 @@ template <typename... TInterfaces>
 class ContainerSlice;
 
 template <typename... TInterfaces>
+class ContainerView;
+
+template <typename... TInterfaces>
+class ContainerSliceLazy;
+
+template <typename... TInterfaces>
+class ContainerViewLazy;
+
+template <typename... TInterfaces>
 class ContainerSliceWeak;
 
 template <typename... TInterfaces>
-class ContainerView;
-
+class ContainerSliceWeakLazy;
 
 using EmptyDependenciesChain = TypeList<>;
 class EmptyContainer;
@@ -252,13 +260,28 @@ private:
         }
 
         template <typename... TInterfaces>
+        operator ContainerView<TInterfaces...>() {
+            return ContainerView<TInterfaces...>{ std::static_pointer_cast<Container>(container.shared_from_this()) };
+        }
+
+        template <typename... TInterfaces>
+        operator ContainerSliceLazy<TInterfaces...>() {
+            return ContainerSliceLazy<TInterfaces...>{ std::static_pointer_cast<Container>(container.shared_from_this()) };
+        }
+
+        template <typename... TInterfaces>
+        operator ContainerViewLazy<TInterfaces...>() {
+            return ContainerViewLazy<TInterfaces...>{ std::static_pointer_cast<Container>(container.shared_from_this()) };
+        }
+
+        template <typename... TInterfaces>
         operator ContainerSliceWeak<TInterfaces...>() {
             return ContainerSliceWeak<TInterfaces...>{ std::static_pointer_cast<Container>(container.shared_from_this()) };
         }
 
         template <typename... TInterfaces>
-        operator ContainerView<TInterfaces...>() {
-            return ContainerView<TInterfaces...>{ std::static_pointer_cast<Container>(container.shared_from_this()) };
+        operator ContainerSliceWeakLazy<TInterfaces...>() {
+            return ContainerSliceWeakLazy<TInterfaces...>{ std::static_pointer_cast<Container>(container.shared_from_this()) };
         }
 
         Container& container;

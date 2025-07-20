@@ -220,4 +220,104 @@ TEST_CASE("should construct ContainerSlice from ContainerView with wider interfa
     REQUIRE_EQ(container->find<S4>()->i, 4);
 }
 
+TEST_CASE("ensure ContainerSlice assign to itself ain't broken") {
+    // clang-format off
+    auto container = liant::makeContainer(
+        liant::registerInstanceOf<S1>(),
+        liant::registerInstanceOf<S2>(),
+        liant::registerInstanceOf<S3>(),
+        liant::registerInstanceOf<S4>()
+    );
+    // clang-format on
+
+    liant::ContainerSlice<S1, S2, S3> slice(container);
+    REQUIRE_EQ(container.use_count(), 2);
+
+    slice = slice;
+    REQUIRE_EQ(container.use_count(), 2);
+
+    REQUIRE_EQ(container->find<S1>()->i, 1);
+    REQUIRE_EQ(container->find<S2>()->i, 2);
+    REQUIRE_EQ(container->find<S3>()->i, 3);
+    REQUIRE_FALSE(container->find<S4>());
+}
+
+
+TEST_CASE("should construct ContainerSliceWeak from ContainerSlice with wider interface") {
+    // clang-format off
+    auto container = liant::makeContainer(
+        liant::registerInstanceOf<S1>(),
+        liant::registerInstanceOf<S2>(),
+        liant::registerInstanceOf<S3>(),
+        liant::registerInstanceOf<S4>()
+    );
+    // clang-format on
+
+    liant::ContainerSlice<S1, S2, S3, S4> slice(container);
+    liant::ContainerSliceWeak<S2, S1> sliceWeak(slice);
+
+    REQUIRE_EQ(container.use_count(), 2);
+
+    liant::ContainerSlice<S2, S1> slice2 = sliceWeak.lock();
+    REQUIRE_EQ(container.use_count(), 3);
+
+    REQUIRE_EQ(container->find<S1>()->i, 1);
+    REQUIRE_EQ(container->find<S2>()->i, 2);
+    REQUIRE_EQ(container->find<S3>()->i, 3);
+    REQUIRE_EQ(container->find<S4>()->i, 4);
+}
+
+TEST_CASE("should construct ContainerSliceWeakLazy from ContainerSliceLazy with wider interface") {
+    // clang-format off
+    auto container = liant::makeContainer(
+        liant::registerInstanceOf<S1>(),
+        liant::registerInstanceOf<S2>(),
+        liant::registerInstanceOf<S3>(),
+        liant::registerInstanceOf<S4>()
+    );
+    // clang-format on
+
+    liant::ContainerSliceLazy<S1, S2, S3, S4> slice(container);
+    liant::ContainerSliceWeakLazy<S2, S1> sliceWeak(slice);
+
+    REQUIRE_EQ(container.use_count(), 2);
+
+    liant::ContainerSliceLazy<S2, S1> slice2 = sliceWeak.lock();
+    REQUIRE_EQ(container.use_count(), 3);
+
+    REQUIRE_FALSE(container->find<S1>());
+    REQUIRE_FALSE(container->find<S2>());
+    REQUIRE_FALSE(container->find<S3>());
+    REQUIRE_FALSE(container->find<S4>());
+
+    slice2.resolve<S2>();
+
+    REQUIRE_FALSE(container->find<S1>());
+    REQUIRE_EQ(container->find<S2>()->i, 2);
+    REQUIRE_FALSE(container->find<S3>());
+    REQUIRE_FALSE(container->find<S4>());
+}
+
+TEST_CASE("Ensure multiple layers of indirection work") {
+    // clang-format off
+    auto container = liant::makeContainer(
+        liant::registerInstanceOf<S1>(),
+        liant::registerInstanceOf<S2>(),
+        liant::registerInstanceOf<S3>(),
+        liant::registerInstanceOf<S4>()
+    );
+    // clang-format on
+
+    liant::ContainerSliceLazy<S1, S2, S3, S4> slice1(container);
+    liant::ContainerSliceLazy<S2, S3, S4> slice2(slice1);
+    liant::ContainerSliceLazy<S3, S4> slice3(slice2);
+    liant::ContainerSliceLazy<S4> slice4(slice3);
+
+    REQUIRE_EQ(container.use_count(), 5);
+
+    slice4.resolve<S4>();
+
+    REQUIRE_EQ(slice4.find<S4>()->i, 4);
+}
+
 } // namespace liant::test

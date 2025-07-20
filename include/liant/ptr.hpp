@@ -10,9 +10,7 @@ LIANT_EXPORT
 // clang-format on
 namespace liant {
 namespace details {
-enum class ContainerPtrKind;
-
-template <ContainerPtrKind PtrKind, typename... TInterfaces>
+template <typename TTraits, typename... TInterfaces>
 class ContainerSliceImpl;
 } // namespace details
 
@@ -27,7 +25,7 @@ class SharedRef {
     template <typename UBaseContainer, typename... UTypeMappings>
     friend class Container;
 
-    template <details::ContainerPtrKind PtrKindOther, typename... UInterfaces>
+    template <typename TTraits, typename... UInterfaces>
     friend class details::ContainerSliceImpl;
 
     template <typename U>
@@ -96,7 +94,7 @@ class SharedPtr {
     template <typename UBaseContainer, typename... UTypeMappings>
     friend class Container;
 
-    template <details::ContainerPtrKind PtrKind, typename... TInterfaces>
+    template <typename TTraits, typename... TInterfaces>
     friend class details::ContainerSliceImpl;
 
     template <typename U>
@@ -237,80 +235,5 @@ private:
 private:
     T* ptr{};
     std::weak_ptr<const ContainerBase> owner{};
-};
-
-template <typename T>
-class NotNull;
-
-template <typename T>
-class NotNull<T*> {
-public:
-    NotNull(T& ref)
-        : ptr(std::addressof(ref)) {}
-
-    T* operator->() const {
-        return ptr;
-    }
-
-    T& operator*() const {
-        return *ptr;
-    }
-
-    operator T&() {
-        return *ptr;
-    }
-
-    operator T*&() {
-        return ptr;
-    }
-
-    operator T* const&() const {
-        return ptr;
-    }
-
-private:
-    T* ptr{};
-};
-
-template <typename T>
-class NotNull<SharedPtr<T>> {
-public:
-    NotNull(const SharedRef<T>& ref)
-        : ptr(ref) {}
-    NotNull(SharedRef<T>&& ref)
-        : ptr(std::move(ref)) {}
-
-    T* operator->() const {
-        return ptr.get();
-    }
-
-    T& operator*() const {
-        return *ptr;
-    }
-
-    operator SharedRef<T>() {
-        return ptr.toSharedRef();
-    }
-
-    operator SharedPtr<T>&() {
-        return ptr;
-    }
-
-    operator SharedPtr<T> const&() const {
-        return ptr;
-    }
-
-
-private:
-    friend bool operator==(const NotNull& lhs, const NotNull& rhs) {
-        return lhs.ptr == rhs.ptr;
-    }
-
-    friend bool operator!=(const NotNull& lhs, const NotNull& rhs) {
-        return !(lhs == rhs);
-    }
-
-private:
-    SharedPtr<T> ptr{};
 };
 } // namespace liant

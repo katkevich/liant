@@ -18,10 +18,19 @@ template <typename... TInterfaces>
 using container_slice = ContainerSlice<TInterfaces...>;
 
 template <typename... TInterfaces>
+using container_view = ContainerView<TInterfaces...>;
+
+template <typename... TInterfaces>
+using container_slice_lazy = ContainerSliceLazy<TInterfaces...>;
+
+template <typename... TInterfaces>
+using container_view_lazy = ContainerViewLazy<TInterfaces...>;
+
+template <typename... TInterfaces>
 using container_slice_weak = ContainerSliceWeak<TInterfaces...>;
 
 template <typename... TInterfaces>
-using container_view = ContainerView<TInterfaces...>;
+using container_slice_weak_lazy = ContainerSliceWeakLazy<TInterfaces...>;
 
 using empty_container = EmptyContainer;
 
