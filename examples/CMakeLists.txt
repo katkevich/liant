@@ -52,3 +52,5 @@ set_target_properties(example_detect_dependencies_cycle_in_base_container PROPER
 )
 target_link_libraries(example_detect_dependencies_cycle_in_base_container PUBLIC liant::liant_module)
 # target_link_libraries(example_detect_dependencies_cycle_in_base_container PUBLIC liant::liant)
+
+add_subdirectory(src/04_wget EXCLUDE_FROM_ALL)

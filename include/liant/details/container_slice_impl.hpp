@@ -74,6 +74,14 @@ public:
             resolveAllChecked();
         }
     }
+    template <typename UBaseContainer, typename... UTypeMappings>
+    ContainerSliceImpl(const Container<UBaseContainer, UTypeMappings...>& container)
+        : vtable(&vtableForContainer<Container<UBaseContainer, UTypeMappings...>, TInterfaces...>)
+        , container(container.shared_from_this()) {
+        if constexpr (TTraits::Resolve == ResolveMode::Ctor) {
+            resolveAllChecked();
+        }
+    }
 
     template <typename UTraits>
     ContainerSliceImpl(const ContainerSliceImpl<UTraits, TInterfaces...>& other)

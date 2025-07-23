@@ -16,7 +16,7 @@ target_compile_options(liant_warn_lvl INTERFACE
     $<$<CXX_COMPILER_ID:Clang,AppleClang,GNU,Intel>: -Wall -Wextra>
     $<$<CXX_COMPILER_ID:MSVC>:
         # Various options for closer standard conformance
-        /utf-8 /Zc:__cplusplus /Zc:throwingNew /Zc:inline /Zc:externConstexpr
+        /Zc:__cplusplus /Zc:throwingNew /Zc:inline /Zc:externConstexpr
         /Zc:templateScope /Zc:checkGwOdr /Zc:enumTypes
         /W4
         /wd4459 # local variable name hides global variable

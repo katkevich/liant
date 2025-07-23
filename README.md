@@ -50,10 +50,9 @@ int main()
 
 * Injection through constructors or aggregate initialization.
 * Detects circular dependencies **at compile time**.
-* Dependencies are resolved and injected lazily and automatically.
+* Dependencies may be resolved automatically all at once or lazily upon request.
 * Initialization and destruction order management. `postCreate`/`preDestroy` customization points.
-* Ability to instantiate all dependencies at once, automatically resolving their order, or to instantiate them one by one.
-* You can "include" one container (or its slice) as a base for another, so that dependencies from base container are reused by child container.
+* You can "include" one container (or its view/slice) as a base for another, so that dependencies from base container are reused by child container.
 * Bind concrete types to interfaces or simply register types as-is.
 * **Multiple Distribution Formats:**
     * **Header-only version:** For traditional `#include`-based usage.
@@ -61,16 +60,41 @@ int main()
     * **C++23 Module version:** `import std` support.
 * **Nice Compile-Time Diagnostics:** provides clear error messages to help you quickly resolve compilation errors if you misuse API.
 
+## Quick reference
+1. `std::shared_ptr<liant::Container<long-list-of-types>> container = liant::makeContainer(...)` - make DI container
+1. `liant::ContainerView<Ts...>` - subset of Container's dependencies
+   * holds non-owning reference to the original erased `liant::Container`
+   * all dependencies are resolved automatically
+   * **your best choice if a dependency registered within the Container itself depends on other dependencies also managed by the Container** 
+1. `liant::ContainerSlice<Ts...>` - subset of Container's dependencies
+   * holds `shared_ptr` to the original erased `liant::Container` (i.e. it extends the lifetime of the Container and managed dependencies)
+   * all dependencies are resolved automatically
+1. `liant::ContainerViewLazy<Ts...>` - subset of Container's dependencies 
+   * holds non-owning reference to the original erased `liant::Container`
+   * dependencies should be resolved manually using `view.resolveAll()`/`view.resolve<T>()`
+1. `liant::ContainerSliceLazy<Ts...>` - subset of Container's dependencies
+   * holds `shared_ptr` to the original erased `liant::Container` (i.e. it extends the lifetime of the Container and managed dependencies)
+   * dependencies should be resolved manually using `slice.resolveAll()`/`slice.resolve<T>()`
+1. `liant::ContainerSliceWeak<Ts...>` - subset of Container's dependencies
+    * holds `weak_ptr` to the original erased `liant::Container` (i.e. it DOES NOT extend the lifetime of the Container and managed dependencies)
+    * all dependencies are resolved automatically
+1. `liant::ContainerSliceWeakLazy<Ts...>` - subset of Container's dependencies
+    * holds `weak_ptr` to the original erased `liant::Container` (i.e. it DOES NOT extend the lifetime of the Container and managed dependencies)
+    * dependencies should be resolved manually using `slice.resolveAll()`/`slice.resolve<T>()`
+
+
 ## How to build & install
 
 ### Prerequisites
 
 * Git
-* CMake 3.30+
+* CMake 4.0.3
 * Ninja 1.11+
 * C++ toolchain:
-    * **C++23 `liant_module` target (with `import std`)** is only working with **Clang 20+** and **libc++-20** for now. You will need to configure your cmake build with libc++ standard library like `-DCMAKE_CXX_FLAGS="-stdlib=libc++"`.
-    * **C++20 header-only `liant` target** & **`liant_module_nostd` target** should work with any reasonably conforming C++20 compiler (GCC 13+, Clang 18+, MSVC 17.10+).
+    * **C++23 `liant_module` target (with `import std`)** 
+      * **Clang20 + libc++-20** - you will need to configure your cmake build with libc++ standard library like `-DCMAKE_CXX_FLAGS="-stdlib=libc++"`
+      * **MSVCv19.38+** - works out of the box (MS VS or CLion may use outdated CMake so make sure you use the newest CMake)
+    * **C++20 header-only `liant` target** & **`liant_module_nostd` target** should work with any reasonably conforming C++20 compiler (GCC 13+, Clang 18+, MSVC 17.10+)
 
 ### Building and Installing from Source
 

@@ -29,12 +29,12 @@ class SharedRef {
     friend class details::ContainerSliceImpl;
 
     template <typename U>
-    class SharedPtr;
+    friend class SharedPtr;
 
     template <typename U>
     friend class WeakPtr;
 
-    SharedRef(T& ref, std::shared_ptr<ContainerBase> owner)
+    SharedRef(T& ref, std::shared_ptr<const ContainerBase> owner)
         : ptr(std::addressof(ref))
         , owner(std::move(owner)) {}
 
@@ -58,8 +58,8 @@ public:
         swap(first.owner, second.owner);
     }
 
-    T& get() const {
-        return *ptr;
+    T* get() const {
+        return ptr;
     }
 
     T* operator->() const {
@@ -80,8 +80,8 @@ private:
     }
 
 private:
-    T* ptr{};                               // never nullptr
-    std::shared_ptr<ContainerBase> owner{}; // never nullptr
+    T* ptr{};                                     // never nullptr
+    std::shared_ptr<const ContainerBase> owner{}; // never nullptr
 };
 
 
