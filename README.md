@@ -7,6 +7,8 @@
 
 Beyond its core DI features, `liant` also serves as a good example of how to build, distribute, and consume a C++ library using modern CMake, including C++20 Modules and C++23 `import std` integration.
 
+[Documentation](https://github.com/Katkevich/liant/blob/main/doc.md)
+
 ## Quick example
 
 ```c++
