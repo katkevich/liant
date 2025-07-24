@@ -124,8 +124,8 @@ target_compile_definitions(liant_module_nostd PRIVATE LIANT_MODULE)
 #
 # Test ON/OFF, Examples ON/OFF
 #
-option(LIANT_BUILD_TESTS "Build Liant tests" ${PROJECT_IS_TOP_LEVEL})
-option(LIANT_BUILD_EXAMPLES "Build Liant examples" ${PROJECT_IS_TOP_LEVEL})
+option(LIANT_BUILD_TESTS "Build Liant tests" OFF)
+option(LIANT_BUILD_EXAMPLES "Build Liant examples" OFF)
 
 #
 # Tests
