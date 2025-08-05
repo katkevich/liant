@@ -16,6 +16,7 @@ template <typename... TInterfaces>
 class ContainerSlice : public details::ContainerSliceImpl<details::SharedOwnership, ContainerSlice<TInterfaces...>> {
 public:
     using details::ContainerSliceImpl<details::SharedOwnership, ContainerSlice>::ContainerSliceImpl;
+    using details::ContainerSliceImpl<details::SharedOwnership, ContainerSlice>::operator=;
 
     explicit operator bool() const {
         return this->container.operator bool();
@@ -31,6 +32,7 @@ class ContainerSliceLazy
     : public details::ContainerSliceImpl<details::SharedOwnershipLazy, ContainerSliceLazy<TInterfaces...>> {
 public:
     using details::ContainerSliceImpl<details::SharedOwnershipLazy, ContainerSliceLazy>::ContainerSliceImpl;
+    using details::ContainerSliceImpl<details::SharedOwnershipLazy, ContainerSliceLazy>::operator=;
 
     explicit operator bool() const {
         return this->container.operator bool();
@@ -45,6 +47,7 @@ template <typename... TInterfaces>
 class ContainerSliceWeak : private details::ContainerSliceImpl<details::WeakOwnership, ContainerSliceWeak<TInterfaces...>> {
 public:
     using details::ContainerSliceImpl<details::WeakOwnership, ContainerSliceWeak>::ContainerSliceImpl;
+    using details::ContainerSliceImpl<details::WeakOwnership, ContainerSliceWeak>::operator=;
 
     ContainerSlice<TInterfaces...> lock() const {
         return ContainerSlice<TInterfaces...>(*this);
@@ -58,6 +61,7 @@ class ContainerSliceWeakLazy
     : private details::ContainerSliceImpl<details::WeakOwnershipLazy, ContainerSliceWeakLazy<TInterfaces...>> {
 public:
     using details::ContainerSliceImpl<details::WeakOwnershipLazy, ContainerSliceWeakLazy>::ContainerSliceImpl;
+    using details::ContainerSliceImpl<details::WeakOwnershipLazy, ContainerSliceWeakLazy>::operator=;
 
     ContainerSliceLazy<TInterfaces...> lock() const {
         return ContainerSliceLazy<TInterfaces...>(*this);

@@ -321,4 +321,390 @@ TEST_CASE("Ensure multiple layers of indirection work") {
     REQUIRE_EQ(slice4.find<S4>()->i, 4);
 }
 
+TEST_CASE("should construct ContainerSlice from ContainerViewLazy (same interfaces)") {
+    auto container = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+
+    liant::ContainerViewLazy<S1, S2> view(container);
+    // all instances will be resolved here
+    liant::ContainerSlice<S1, S2> slice(view);
+
+    REQUIRE(container->find<S1>());
+    REQUIRE(container->find<S2>());
+}
+
+TEST_CASE("should construct ContainerSliceLazy from ContainerViewLazy (same interfaces)") {
+    auto container = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+
+    liant::ContainerViewLazy<S1, S2> view(container);
+    liant::ContainerSliceLazy<S1, S2> slice(view);
+
+    REQUIRE_FALSE(container->find<S1>());
+    REQUIRE_FALSE(container->find<S2>());
+}
+
+TEST_CASE("should construct ContainerSliceWeak from ContainerViewLazy (same interfaces)") {
+    auto container = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+
+    liant::ContainerViewLazy<S1, S2> view(container);
+    // all instances will be resolved here
+    liant::ContainerSliceWeak<S1, S2> slice(view);
+
+    REQUIRE(container->find<S1>());
+    REQUIRE(container->find<S2>());
+}
+
+TEST_CASE("should construct ContainerSliceWeakLazy from ContainerViewLazy (same interfaces)") {
+    auto container = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+
+    liant::ContainerViewLazy<S1, S2> view(container);
+    liant::ContainerSliceWeakLazy<S1, S2> slice(view);
+
+    REQUIRE_FALSE(container->find<S1>());
+    REQUIRE_FALSE(container->find<S2>());
+}
+
+TEST_CASE("should construct ContainerView from ContainerViewLazy (same interfaces)") {
+    auto container = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+
+    liant::ContainerViewLazy<S1, S2> view(container);
+    // all instances will be resolved here
+    liant::ContainerView<S1, S2> nonLazyView(view);
+
+    REQUIRE(container->find<S1>());
+    REQUIRE(container->find<S2>());
+}
+
+TEST_CASE("should construct ContainerViewLazy from ContainerViewLazy (same interfaces)") {
+    auto container = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+
+    liant::ContainerViewLazy<S1, S2> view(container);
+    liant::ContainerViewLazy<S1, S2> view2(view);
+
+    REQUIRE_FALSE(container->find<S1>());
+    REQUIRE_FALSE(container->find<S2>());
+}
+
+
+TEST_CASE("should assign ContainerSlice from ContainerViewLazy (same interfaces)") {
+    auto container = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+    auto container2 = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+    container2->resolveRaw<S1>().i = 42;
+    container2->resolveRaw<S2>().i = 43;
+
+    liant::ContainerViewLazy<S1, S2> view(container);
+    liant::ContainerSlice<S1, S2> slice(container2);
+
+    REQUIRE_EQ(slice.find<S1>()->i, 42);
+    REQUIRE_EQ(slice.find<S2>()->i, 43);
+    REQUIRE_FALSE(container->find<S1>());
+    REQUIRE_FALSE(container->find<S2>());
+
+    slice = view;
+    REQUIRE_EQ(slice.find<S1>()->i, 1);
+    REQUIRE_EQ(slice.find<S2>()->i, 2);
+    REQUIRE_EQ(container->find<S1>()->i, 1);
+    REQUIRE_EQ(container->find<S2>()->i, 2);
+}
+
+TEST_CASE("should assign ContainerSliceLazy from ContainerViewLazy (same interfaces)") {
+    auto container = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+    auto container2 = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+    container2->resolveRaw<S1>().i = 42;
+    container2->resolveRaw<S2>().i = 43;
+
+    liant::ContainerViewLazy<S1, S2> view(container);
+    liant::ContainerSliceLazy<S1, S2> slice(container2);
+
+    REQUIRE_EQ(slice.find<S1>()->i, 42);
+    REQUIRE_EQ(slice.find<S2>()->i, 43);
+
+    slice = view;
+    REQUIRE_FALSE(slice.find<S1>());
+    REQUIRE_FALSE(slice.find<S2>());
+    REQUIRE_FALSE(container->find<S1>());
+    REQUIRE_FALSE(container->find<S2>());
+
+    slice.resolveAll();
+    REQUIRE_EQ(slice.find<S1>()->i, 1);
+    REQUIRE_EQ(slice.find<S2>()->i, 2);
+    REQUIRE_EQ(container->find<S1>()->i, 1);
+    REQUIRE_EQ(container->find<S2>()->i, 2);
+}
+
+TEST_CASE("should assign ContainerSliceWeak from ContainerViewLazy (same interfaces)") {
+    auto container = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+    auto container2 = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+    container2->resolveRaw<S1>().i = 42;
+    container2->resolveRaw<S2>().i = 43;
+
+    liant::ContainerViewLazy<S1, S2> view(container);
+    liant::ContainerSliceWeak<S1, S2> slice(container2);
+
+    REQUIRE_FALSE(container->find<S1>());
+    REQUIRE_FALSE(container->find<S2>());
+
+    slice = view;
+    REQUIRE_EQ(container->find<S1>()->i, 1);
+    REQUIRE_EQ(container->find<S2>()->i, 2);
+}
+
+TEST_CASE("should assign ContainerSliceWeakLazy from ContainerViewLazy (same interfaces)") {
+    auto container = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+    auto container2 = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+    container2->resolveRaw<S1>().i = 42;
+    container2->resolveRaw<S2>().i = 43;
+
+    liant::ContainerViewLazy<S1, S2> view(container);
+    liant::ContainerSliceWeakLazy<S1, S2> slice(container2);
+
+    slice = view;
+    REQUIRE_FALSE(container->find<S1>());
+    REQUIRE_FALSE(container->find<S2>());
+
+    slice.lock().resolveAll();
+    REQUIRE_EQ(container->find<S1>()->i, 1);
+    REQUIRE_EQ(container->find<S2>()->i, 2);
+}
+
+TEST_CASE("should assign ContainerView from ContainerViewLazy (same interfaces)") {
+    auto container = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+    auto container2 = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+    container2->resolveRaw<S1>().i = 42;
+    container2->resolveRaw<S2>().i = 43;
+
+    liant::ContainerViewLazy<S1, S2> view(container);
+    liant::ContainerView<S1, S2> view2(container2);
+
+    REQUIRE_EQ(view2.find<S1>()->i, 42);
+    REQUIRE_EQ(view2.find<S2>()->i, 43);
+    REQUIRE_FALSE(container->find<S1>());
+    REQUIRE_FALSE(container->find<S2>());
+
+    view2 = view;
+    REQUIRE_EQ(view2.find<S1>()->i, 1);
+    REQUIRE_EQ(view2.find<S2>()->i, 2);
+    REQUIRE_EQ(container->find<S1>()->i, 1);
+    REQUIRE_EQ(container->find<S2>()->i, 2);
+}
+
+TEST_CASE("should assign ContainerViewLazy from ContainerViewLazy (same interfaces)") {
+    auto container = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+    auto container2 = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+    container2->resolveRaw<S1>().i = 42;
+    container2->resolveRaw<S2>().i = 43;
+
+    liant::ContainerViewLazy<S1, S2> view(container);
+    liant::ContainerViewLazy<S1, S2> view2(container2);
+
+    REQUIRE_EQ(view2.find<S1>()->i, 42);
+    REQUIRE_EQ(view2.find<S2>()->i, 43);
+
+    view2 = view;
+    REQUIRE_FALSE(view2.find<S1>());
+    REQUIRE_FALSE(view2.find<S2>());
+    REQUIRE_FALSE(container->find<S1>());
+    REQUIRE_FALSE(container->find<S2>());
+
+    view2.resolveAll();
+    REQUIRE_EQ(view2.find<S1>()->i, 1);
+    REQUIRE_EQ(view2.find<S2>()->i, 2);
+    REQUIRE_EQ(container->find<S1>()->i, 1);
+    REQUIRE_EQ(container->find<S2>()->i, 2);
+}
+////////////////////////////////////////////////////
+TEST_CASE("should construct ContainerSlice from ContainerViewLazy (narrower interfaces)") {
+    auto container = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+
+    liant::ContainerViewLazy<S1, S2> view(container);
+    // S1 instance will be resolved here
+    liant::ContainerSlice<S1> slice(view);
+
+    REQUIRE(container->find<S1>());
+    REQUIRE_FALSE(container->find<S2>());
+}
+
+TEST_CASE("should construct ContainerSliceLazy from ContainerViewLazy (narrower interfaces)") {
+    auto container = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+
+    liant::ContainerViewLazy<S1, S2> view(container);
+    liant::ContainerSliceLazy<S1> slice(view);
+
+    REQUIRE_FALSE(container->find<S1>());
+    REQUIRE_FALSE(container->find<S2>());
+
+    slice.resolveAll();
+
+    REQUIRE(container->find<S1>());
+    REQUIRE_FALSE(container->find<S2>());
+}
+
+TEST_CASE("should construct ContainerSliceWeak from ContainerViewLazy (narrower interfaces)") {
+    auto container = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+
+    liant::ContainerViewLazy<S1, S2> view(container);
+    // S1 instance will be resolved here
+    liant::ContainerSliceWeak<S1> slice(view);
+
+    REQUIRE(container->find<S1>());
+    REQUIRE_FALSE(container->find<S2>());
+}
+
+TEST_CASE("should construct ContainerSliceWeakLazy from ContainerViewLazy (narrower interfaces)") {
+    auto container = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+
+    liant::ContainerViewLazy<S1, S2> view(container);
+    liant::ContainerSliceWeakLazy<S1> slice(view);
+
+    REQUIRE_FALSE(container->find<S1>());
+    REQUIRE_FALSE(container->find<S2>());
+
+    slice.lock().resolveAll();
+
+    REQUIRE(container->find<S1>());
+    REQUIRE_FALSE(container->find<S2>());
+}
+
+TEST_CASE("should construct ContainerView from ContainerViewLazy (narrower interfaces)") {
+    auto container = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+
+    liant::ContainerViewLazy<S1, S2> view(container);
+    // S1 instance will be resolved here
+    liant::ContainerView<S1> nonLazyView(view);
+
+    REQUIRE(container->find<S1>());
+    REQUIRE_FALSE(container->find<S2>());
+}
+
+TEST_CASE("should construct ContainerViewLazy from ContainerViewLazy (narrower interfaces)") {
+    auto container = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+
+    liant::ContainerViewLazy<S1, S2> view(container);
+    liant::ContainerViewLazy<S1> view2(view);
+
+    REQUIRE_FALSE(container->find<S1>());
+    REQUIRE_FALSE(container->find<S2>());
+
+    view2.resolveAll();
+
+    REQUIRE(container->find<S1>());
+    REQUIRE_FALSE(container->find<S2>());
+}
+
+
+TEST_CASE("should assign ContainerSlice from ContainerViewLazy (narrower interfaces)") {
+    auto container = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+    auto container2 = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+    container2->resolveRaw<S1>().i = 42;
+    container2->resolveRaw<S2>().i = 43;
+
+    liant::ContainerViewLazy<S1, S2> view(container);
+    liant::ContainerSlice<S1> slice(container2);
+
+    REQUIRE_EQ(slice.find<S1>()->i, 42);
+    REQUIRE_FALSE(container->find<S1>());
+    REQUIRE_FALSE(container->find<S2>());
+
+    slice = view;
+    REQUIRE_EQ(slice.find<S1>()->i, 1);
+    REQUIRE_EQ(container->find<S1>()->i, 1);
+    REQUIRE_FALSE(container->find<S2>());
+}
+
+TEST_CASE("should assign ContainerSliceLazy from ContainerViewLazy (narrower interfaces)") {
+    auto container = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+    auto container2 = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+    container2->resolveRaw<S1>().i = 42;
+    container2->resolveRaw<S2>().i = 43;
+
+    liant::ContainerViewLazy<S1, S2> view(container);
+    liant::ContainerSliceLazy<S1> slice(container2);
+
+    REQUIRE_EQ(slice.find<S1>()->i, 42);
+
+    slice = view;
+    REQUIRE_FALSE(slice.find<S1>());
+    REQUIRE_FALSE(container->find<S1>());
+    REQUIRE_FALSE(container->find<S2>());
+
+    slice.resolveAll();
+    REQUIRE_EQ(slice.find<S1>()->i, 1);
+    REQUIRE_EQ(container->find<S1>()->i, 1);
+    REQUIRE_FALSE(container->find<S2>());
+}
+
+TEST_CASE("should assign ContainerSliceWeak from ContainerViewLazy (narrower interfaces)") {
+    auto container = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+    auto container2 = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+    container2->resolveRaw<S1>().i = 42;
+    container2->resolveRaw<S2>().i = 43;
+
+    liant::ContainerViewLazy<S1, S2> view(container);
+    liant::ContainerSliceWeak<S1> slice(container2);
+
+    REQUIRE_FALSE(container->find<S1>());
+    REQUIRE_FALSE(container->find<S2>());
+
+    slice = view;
+    REQUIRE_EQ(container->find<S1>()->i, 1);
+    REQUIRE_FALSE(container->find<S2>());
+}
+
+TEST_CASE("should assign ContainerSliceWeakLazy from ContainerViewLazy (narrower interfaces)") {
+    auto container = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+    auto container2 = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+    container2->resolveRaw<S1>().i = 42;
+    container2->resolveRaw<S2>().i = 43;
+
+    liant::ContainerViewLazy<S1, S2> view(container);
+    liant::ContainerSliceWeakLazy<S1> slice(container2);
+
+    slice = view;
+    REQUIRE_FALSE(container->find<S1>());
+    REQUIRE_FALSE(container->find<S2>());
+
+    slice.lock().resolveAll();
+    REQUIRE_EQ(container->find<S1>()->i, 1);
+    REQUIRE_FALSE(container->find<S2>());
+}
+
+TEST_CASE("should assign ContainerView from ContainerViewLazy (narrower interfaces)") {
+    auto container = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+    auto container2 = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+    container2->resolveRaw<S1>().i = 42;
+    container2->resolveRaw<S2>().i = 43;
+
+    liant::ContainerViewLazy<S1, S2> view(container);
+    liant::ContainerView<S1> view2(container2);
+
+    REQUIRE_EQ(view2.find<S1>()->i, 42);
+    REQUIRE_FALSE(container->find<S1>());
+    REQUIRE_FALSE(container->find<S2>());
+
+    view2 = view;
+    REQUIRE_EQ(view2.find<S1>()->i, 1);
+    REQUIRE_EQ(container->find<S1>()->i, 1);
+    REQUIRE_FALSE(container->find<S2>());
+}
+
+TEST_CASE("should assign ContainerViewLazy from ContainerViewLazy (narrower interfaces)") {
+    auto container = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+    auto container2 = liant::makeContainer(liant::registerInstanceOf<S1>(), liant::registerInstanceOf<S2>());
+    container2->resolveRaw<S1>().i = 42;
+    container2->resolveRaw<S2>().i = 43;
+
+    liant::ContainerViewLazy<S1, S2> view(container);
+    liant::ContainerViewLazy<S1> view2(container2);
+
+    REQUIRE_EQ(view2.find<S1>()->i, 42);
+
+    view2 = view;
+    REQUIRE_FALSE(view2.find<S1>());
+    REQUIRE_FALSE(container->find<S1>());
+    REQUIRE_FALSE(container->find<S2>());
+
+    view2.resolveAll();
+    REQUIRE_EQ(view2.find<S1>()->i, 1);
+    REQUIRE_EQ(container->find<S1>()->i, 1);
+    REQUIRE_FALSE(container->find<S2>());
+}
 } // namespace liant::test

@@ -16,6 +16,7 @@ template <typename... TInterfaces>
 class ContainerView : public details::ContainerSliceImpl<details::NonOwningRef, ContainerView<TInterfaces...>> {
 public:
     using details::ContainerSliceImpl<details::NonOwningRef, ContainerView>::ContainerSliceImpl;
+    using details::ContainerSliceImpl<details::NonOwningRef, ContainerView>::operator=;
 };
 
 // subset of another type-erased DI container (non-owning reference) - basically non-owning version of liant::ContainerSliceLazy
@@ -23,5 +24,6 @@ template <typename... TInterfaces>
 class ContainerViewLazy : public details::ContainerSliceImpl<details::NonOwningRefLazy, ContainerViewLazy<TInterfaces...>> {
 public:
     using details::ContainerSliceImpl<details::NonOwningRefLazy, ContainerViewLazy>::ContainerSliceImpl;
+    using details::ContainerSliceImpl<details::NonOwningRefLazy, ContainerViewLazy>::operator=;
 };
 } // namespace liant
