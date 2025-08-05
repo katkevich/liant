@@ -3,6 +3,7 @@
 #include "liant/details/container_ptr.hpp"
 #include "liant/details/container_slice_settings.hpp"
 #include "liant/details/container_slice_vtable.hpp"
+#include "liant/factory.hpp"
 
 #ifndef LIANT_MODULE
 #include <cstring>
@@ -40,22 +41,40 @@ using PrettyDependencyLazy =
 
 
 namespace liant::details {
+template <typename TTraits, typename TSelf>
+class ContainerSliceImpl;
+
 // common base class for
 // - liant::ContainerSlice (owning)
 // - liant::ContainerView (non-owning)
 // - liant::ContainerSliceLazy (owning, no automatic resolving in ctor - resolve upon request)
 // - liant::ContainerViewLazy (non-owning, no automatic resolving in ctor - resolve upon request)
-template <typename TTraits, typename... TInterfaces>
-class ContainerSliceImpl : public std::conditional_t<TTraits::Resolve == ResolveMode::Ctor,
-                               liant::PrettyDependency<ContainerSliceImpl<TTraits, TInterfaces...>, TInterfaces>,
-                               liant::PrettyDependencyLazy<ContainerSliceImpl<TTraits, TInterfaces...>, TInterfaces>>... {
+template <typename TTraits, template <typename...> typename TSelf, typename... TInterfaces>
+class ContainerSliceImpl<TTraits, TSelf<TInterfaces...>>
+    : public std::conditional_t<TTraits::Resolve == ResolveMode::Ctor,
+          PrettyDependency<ContainerSliceImpl<TTraits, TSelf<TInterfaces...>>, TInterfaces>,
+          PrettyDependencyLazy<ContainerSliceImpl<TTraits, TSelf<TInterfaces...>>, TInterfaces>>... {
+    // `Container<...>` should be able to access private `operator->`
     template <typename UBaseContainer, typename... UTypeMappings>
     friend class liant::Container;
 
-    template <typename UTraits, typename... UInterfaces>
+    // `FactoryImpl<...>` should be able to access private `ContainerSliceImpl(vtable, container)` ctor
+    template <OwnershipKind OwnershipOther, typename U>
+    friend class FactoryImpl;
+
+    // should be able to access private members of `ContainerSliceImpl<...>` with different specializations
+    template <typename UTraits, typename USelf>
     friend class ContainerSliceImpl;
 
-    ContainerSliceVTable<TInterfaces...> vtable;
+private:
+    template <OwnershipKind OwnershipOther>
+    ContainerSliceImpl(const ContainerSliceVTableErased& vtable, const ContainerPtr<OwnershipOther>& container)
+        : vtable(vtable)
+        , container(container) {
+        if constexpr (TTraits::Resolve == ResolveMode::Ctor) {
+            resolveAllChecked();
+        }
+    }
 
 public:
     template <typename UBaseContainer, typename... UTypeMappings>
@@ -83,8 +102,8 @@ public:
         }
     }
 
-    template <typename UTraits>
-    ContainerSliceImpl(const ContainerSliceImpl<UTraits, TInterfaces...>& other)
+    template <typename UTraits, template <typename...> typename USelf>
+    ContainerSliceImpl(const ContainerSliceImpl<UTraits, USelf<TInterfaces...>>& other)
         : vtable(other.vtable)
         , container(other.container) {
         if constexpr (TTraits::Resolve == ResolveMode::Ctor && UTraits::Resolve == ResolveMode::Lazy) {
@@ -92,18 +111,18 @@ public:
         }
     }
 
-    template <typename UTraits>
-    ContainerSliceImpl(ContainerSliceImpl<UTraits, TInterfaces...>&& other)
+    template <typename UTraits, template <typename...> typename USelf>
+    ContainerSliceImpl(ContainerSliceImpl<UTraits, USelf<TInterfaces...>>&& other)
         : vtable(std::move(other.vtable))
         , container(std::move(other.container)) {
-        if constexpr (TTraits::ResolveMode == ResolveMode::Ctor && UTraits::ResolveMode == ResolveMode::Lazy) {
+        if constexpr (TTraits::Resolve == ResolveMode::Ctor && UTraits::Resolve == ResolveMode::Lazy) {
             resolveAllChecked();
         }
     }
 
-    template <typename UTraits, typename... UInterfaces>
+    template <typename UTraits, template <typename...> typename USelf, typename... UInterfaces>
         requires liant::IsSubsetOf<TypeList<TInterfaces...>, TypeList<UInterfaces...>>::value
-    ContainerSliceImpl(const ContainerSliceImpl<UTraits, UInterfaces...>& other)
+    ContainerSliceImpl(const ContainerSliceImpl<UTraits, USelf<UInterfaces...>>& other)
         : vtable(other.vtable.vtable, other.vtable.nestedVTables, TypeList<UInterfaces...>{})
         , container(other.container) {
         if constexpr (TTraits::Resolve == ResolveMode::Ctor && UTraits::Resolve == ResolveMode::Lazy) {
@@ -111,57 +130,57 @@ public:
         }
     }
 
-    template <typename UTraits, typename... UInterfaces>
+    template <typename UTraits, template <typename...> typename USelf, typename... UInterfaces>
         requires liant::IsSubsetOf<TypeList<TInterfaces...>, TypeList<UInterfaces...>>::value
-    ContainerSliceImpl(ContainerSliceImpl<UTraits, UInterfaces...>&& other)
+    ContainerSliceImpl(ContainerSliceImpl<UTraits, USelf<UInterfaces...>>&& other)
         : vtable(other.vtable.vtable, other.vtable.nestedVTables, TypeList<UInterfaces...>{})
         , container(std::move(other.container)) {
-        if constexpr (TTraits::ResolveMode == ResolveMode::Ctor && UTraits::ResolveMode == ResolveMode::Lazy) {
+        if constexpr (TTraits::Resolve == ResolveMode::Ctor && UTraits::Resolve == ResolveMode::Lazy) {
             resolveAllChecked();
         }
     }
 
-    template <typename UTraits>
-    ContainerSliceImpl& operator=(const ContainerSliceImpl<UTraits, TInterfaces...>& other) {
+    template <typename UTraits, template <typename...> typename USelf>
+    ContainerSliceImpl& operator=(const ContainerSliceImpl<UTraits, USelf<TInterfaces...>>& other) {
         vtable = other.vtable;
         container = other.container;
 
-        if constexpr (TTraits::ResolveMode == ResolveMode::Ctor && UTraits::ResolveMode == ResolveMode::Lazy) {
+        if constexpr (TTraits::Resolve == ResolveMode::Ctor && UTraits::Resolve == ResolveMode::Lazy) {
             resolveAllChecked();
         }
         return *this;
     }
 
-    template <typename UTraits>
-    ContainerSliceImpl& operator=(ContainerSliceImpl<UTraits, TInterfaces...>&& other) {
+    template <typename UTraits, template <typename...> typename USelf>
+    ContainerSliceImpl& operator=(ContainerSliceImpl<UTraits, USelf<TInterfaces...>>&& other) {
         vtable = std::move(other.vtable);
         container = std::move(other.container);
 
-        if constexpr (TTraits::ResolveMode == ResolveMode::Ctor && UTraits::ResolveMode == ResolveMode::Lazy) {
+        if constexpr (TTraits::Resolve == ResolveMode::Ctor && UTraits::Resolve == ResolveMode::Lazy) {
             resolveAllChecked();
         }
         return *this;
     }
 
-    template <typename UTraits, typename... UInterfaces>
+    template <typename UTraits, template <typename...> typename USelf, typename... UInterfaces>
         requires liant::IsSubsetOf<TypeList<TInterfaces...>, TypeList<UInterfaces...>>::value
-    ContainerSliceImpl& operator=(const ContainerSliceImpl<UTraits, UInterfaces...>& other) {
+    ContainerSliceImpl& operator=(const ContainerSliceImpl<UTraits, USelf<UInterfaces...>>& other) {
         vtable = ContainerSliceVTable<TInterfaces...>(other.vtable.vtable, other.vtable.nestedVTables, TypeList<UInterfaces...>{});
         container = other.container;
 
-        if constexpr (TTraits::ResolveMode == ResolveMode::Ctor && UTraits::ResolveMode == ResolveMode::Lazy) {
+        if constexpr (TTraits::Resolve == ResolveMode::Ctor && UTraits::Resolve == ResolveMode::Lazy) {
             resolveAllChecked();
         }
         return *this;
     }
 
-    template <typename UTraits, typename... UInterfaces>
+    template <typename UTraits, template <typename...> typename USelf, typename... UInterfaces>
         requires liant::IsSubsetOf<TypeList<TInterfaces...>, TypeList<UInterfaces...>>::value
-    ContainerSliceImpl& operator=(ContainerSliceImpl<UTraits, UInterfaces...>&& other) {
+    ContainerSliceImpl& operator=(ContainerSliceImpl<UTraits, USelf<UInterfaces...>>&& other) {
         vtable = ContainerSliceVTable<TInterfaces...>(other.vtable.vtable, other.vtable.nestedVTables, TypeList<UInterfaces...>{});
         container = std::move(other.container);
 
-        if constexpr (TTraits::ResolveMode == ResolveMode::Ctor && UTraits::ResolveMode == ResolveMode::Lazy) {
+        if constexpr (TTraits::Resolve == ResolveMode::Ctor && UTraits::Resolve == ResolveMode::Lazy) {
             resolveAllChecked();
         }
         return *this;
@@ -175,7 +194,7 @@ public:
     // trying to find already created instance registered 'as TInterface'
     // the unsafe raw pointer is being returned here so make sure it doesn't outlive the underlying 'Container'
     template <typename TInterface>
-    TInterface* findRaw() const {
+    [[nodiscard]] TInterface* findRaw() const {
         static_assert(liant::PrintConditional<TypeList<TInterfaces...>::template contains<TInterface>(), TInterface>,
             "Interface you're trying to find is missing from ContainerSlice<...> / "
             "ContainerView<...> (search 'liant::Print' in the compilation output for details)");
@@ -186,7 +205,7 @@ public:
     // trying to find already created instance registered 'as TInterface'
     // returned fat 'SharedRef' protects underlying 'Container' from being destroyed so use 'SharedRef' with caution (you don't really want block 'Container' deletion)
     template <typename TInterface>
-    SharedPtr<TInterface> find() const {
+    [[nodiscard]] SharedPtr<TInterface> find() const {
         return SharedPtr<TInterface>(findRaw<TInterface>(), container.asShared());
     }
 
@@ -220,7 +239,36 @@ public:
         });
     }
 
+    template <typename U>
+    [[nodiscard]] Factory<U> makeFactory() const {
+        return Factory<U>(asSelf());
+    }
+
+    template <typename U>
+    [[nodiscard]] FactoryView<U> makeFactoryView() const {
+        return FactoryView<U>(asSelf());
+    }
+
+    template <typename U>
+    [[nodiscard]] U make() const {
+        return U{ asSelf() };
+    }
+
+    template <typename U, typename... TArgs>
+    [[nodiscard]] std::shared_ptr<U> makeShared(TArgs&&... args) const {
+        return std::make_shared<U>(asSelf(), std::forward<TArgs>(args)...);
+    }
+
+    template <typename U, typename... TArgs>
+    [[nodiscard]] std::unique_ptr<U> makeUnique(TArgs&&... args) const {
+        return std::make_unique<U>(asSelf(), std::forward<TArgs>(args)...);
+    }
+
 private:
+    const TSelf<TInterfaces...>& asSelf() const {
+        return static_cast<const TSelf<TInterfaces...>&>(*this);
+    }
+
     template <typename TInterface, typename TArg, typename... TArgs>
     TInterface& resolveRaw(TArg&&, TArgs&&...) {
         static_assert(liant::Print<TInterface>,
@@ -246,6 +294,9 @@ private:
     ContainerSliceImpl* operator->() {
         return this;
     }
+
+private:
+    ContainerSliceVTable<TInterfaces...> vtable;
 
 protected:
     // underlying container

@@ -13,15 +13,15 @@ namespace liant {
 
 // subset of another type-erased DI container (non-owning reference) - basically non-owning version of liant::ContainerSlice
 template <typename... TInterfaces>
-class ContainerView : public details::ContainerSliceImpl<details::NonOwningRef, TInterfaces...> {
+class ContainerView : public details::ContainerSliceImpl<details::NonOwningRef, ContainerView<TInterfaces...>> {
 public:
-    using details::ContainerSliceImpl<details::NonOwningRef, TInterfaces...>::ContainerSliceImpl;
+    using details::ContainerSliceImpl<details::NonOwningRef, ContainerView>::ContainerSliceImpl;
 };
 
 // subset of another type-erased DI container (non-owning reference) - basically non-owning version of liant::ContainerSliceLazy
 template <typename... TInterfaces>
-class ContainerViewLazy : public details::ContainerSliceImpl<details::NonOwningRefLazy, TInterfaces...> {
+class ContainerViewLazy : public details::ContainerSliceImpl<details::NonOwningRefLazy, ContainerViewLazy<TInterfaces...>> {
 public:
-    using details::ContainerSliceImpl<details::NonOwningRefLazy, TInterfaces...>::ContainerSliceImpl;
+    using details::ContainerSliceImpl<details::NonOwningRefLazy, ContainerViewLazy>::ContainerSliceImpl;
 };
 } // namespace liant

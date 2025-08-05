@@ -12,8 +12,8 @@ namespace liant::details {
 
 template <typename TInterface>
 struct VTableItem {
-    TInterface* (*findRawErased)(liant::ContainerBase* container);
-    TInterface& (*resolveRawErased)(liant::ContainerBase* container);
+    TInterface* (*findRawErased)(ContainerBase* container);
+    TInterface& (*resolveRawErased)(ContainerBase* container);
 };
 
 template <typename... TInterfaces>
@@ -21,10 +21,10 @@ struct VTable : public VTableItem<TInterfaces>... {};
 
 template <typename TContainer, typename... TInterfaces>
 static constexpr VTable<TInterfaces...> vtableForContainer = { VTableItem<TInterfaces>{
-    [](liant::ContainerBase* container) -> TInterfaces* {
+    [](ContainerBase* container) -> TInterfaces* {
         return static_cast<TContainer*>(container)->template findRaw<TInterfaces>();
     },
-    [](liant::ContainerBase* container) -> TInterfaces& {
+    [](ContainerBase* container) -> TInterfaces& {
         return static_cast<TContainer*>(container)->template resolveRaw<TInterfaces>();
     },
 }... };
@@ -58,17 +58,29 @@ static constexpr NestedVTable<TInterfaces...> nestedVTableForNestedVTable = { Ne
     },
 }... };
 
+struct ContainerSliceVTableErased {
+    VTableErased vtable{};
+    DynamicArray<NestedVTableErased> nestedVTables;
+};
+
 template <typename... TInterfaces>
-struct ContainerSliceVTable {
+struct ContainerSliceVTable : ContainerSliceVTableErased {
     template <typename... UInterfaces>
-    ContainerSliceVTable(const VTable<UInterfaces...>* vtable)
-        : vtable(vtable)
-        , nestedVTables(&nestedVTableForVTable<VTable<UInterfaces...>, TInterfaces...>) {}
+    explicit ContainerSliceVTable(const VTable<UInterfaces...>* vtable)
+        : ContainerSliceVTableErased{
+            .vtable = vtable,
+            .nestedVTables = { &nestedVTableForVTable<VTable<UInterfaces...>, TInterfaces...> },
+        } {}
 
     template <typename... UInterfaces>
-    ContainerSliceVTable(VTableErased vtable, const liant::DynamicArray<NestedVTableErased>& nestedVTables, TypeList<UInterfaces...>)
-        : vtable(vtable)
-        , nestedVTables(nestedVTables, &nestedVTableForNestedVTable<NestedVTable<UInterfaces...>, TInterfaces...>) {}
+    ContainerSliceVTable(VTableErased vtable, const DynamicArray<NestedVTableErased>& nestedVTables, TypeList<UInterfaces...>)
+        : ContainerSliceVTableErased{
+            .vtable = vtable,
+            .nestedVTables = { nestedVTables, &nestedVTableForNestedVTable<NestedVTable<UInterfaces...>, TInterfaces...> },
+        } {}
+
+    explicit ContainerSliceVTable(const ContainerSliceVTableErased& vtableErased)
+        : ContainerSliceVTableErased{ vtableErased } {}
 
     ContainerSliceVTable(const ContainerSliceVTable&) = default;
     ContainerSliceVTable(ContainerSliceVTable&&) = default;
@@ -76,7 +88,7 @@ struct ContainerSliceVTable {
     ContainerSliceVTable& operator=(ContainerSliceVTable&&) = default;
 
     template <typename TInterface>
-    TInterface* findRaw(liant::ContainerBase* container) const {
+    TInterface* findRaw(ContainerBase* container) const {
         const auto nestedVTablesLen = nestedVTables.size();
 
         const auto* nestedVTable = static_cast<const NestedVTable<TInterfaces...>*>(nestedVTables[nestedVTablesLen - 1]);
@@ -89,7 +101,7 @@ struct ContainerSliceVTable {
     }
 
     template <typename TInterface>
-    TInterface& resolveRaw(liant::ContainerBase* container) const {
+    TInterface& resolveRaw(ContainerBase* container) const {
         const auto nestedVTablesLen = nestedVTables.size();
 
         const auto* nestedVTable = static_cast<const NestedVTable<TInterfaces...>*>(nestedVTables[nestedVTablesLen - 1]);
@@ -100,8 +112,5 @@ struct ContainerSliceVTable {
 
         return containerInterface;
     }
-
-    VTableErased vtable{};
-    liant::DynamicArray<NestedVTableErased> nestedVTables;
 };
 } // namespace liant::details

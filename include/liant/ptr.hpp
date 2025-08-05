@@ -10,7 +10,7 @@ LIANT_EXPORT
 // clang-format on
 namespace liant {
 namespace details {
-template <typename TTraits, typename... TInterfaces>
+template <typename UTraits, typename USelf>
 class ContainerSliceImpl;
 } // namespace details
 
@@ -25,7 +25,7 @@ class SharedRef {
     template <typename UBaseContainer, typename... UTypeMappings>
     friend class Container;
 
-    template <typename TTraits, typename... UInterfaces>
+    template <typename TTraits, typename USelf>
     friend class details::ContainerSliceImpl;
 
     template <typename U>
@@ -94,7 +94,7 @@ class SharedPtr {
     template <typename UBaseContainer, typename... UTypeMappings>
     friend class Container;
 
-    template <typename TTraits, typename... TInterfaces>
+    template <typename UTraits, typename USelf>
     friend class details::ContainerSliceImpl;
 
     template <typename U>

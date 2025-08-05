@@ -58,7 +58,7 @@ public:
         }
     }
 
-    std::size_t size() const noexcept {
+    [[nodiscard]] std::size_t size() const noexcept {
         return dynamicPart ? dynamicPartSize() + 1 : 1;
     }
 
@@ -67,7 +67,7 @@ public:
     }
 
 private:
-    std::size_t dynamicPartSize() const noexcept {
+    [[nodiscard]] std::size_t dynamicPartSize() const noexcept {
         std::size_t length = 0;
         while (dynamicPart[length]) {
             length++;

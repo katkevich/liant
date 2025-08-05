@@ -13,9 +13,9 @@ namespace liant {
 
 // subset of another type-erased DI container (shared ownership)
 template <typename... TInterfaces>
-class ContainerSlice : public details::ContainerSliceImpl<details::SharedOwnership, TInterfaces...> {
+class ContainerSlice : public details::ContainerSliceImpl<details::SharedOwnership, ContainerSlice<TInterfaces...>> {
 public:
-    using details::ContainerSliceImpl<details::SharedOwnership, TInterfaces...>::ContainerSliceImpl;
+    using details::ContainerSliceImpl<details::SharedOwnership, ContainerSlice>::ContainerSliceImpl;
 
     explicit operator bool() const {
         return this->container.operator bool();
@@ -27,9 +27,10 @@ public:
 
 // subset of another type-erased DI container (shared ownership, no automatic resolving upon the construction)
 template <typename... TInterfaces>
-class ContainerSliceLazy : public details::ContainerSliceImpl<details::SharedOwnershipLazy, TInterfaces...> {
+class ContainerSliceLazy
+    : public details::ContainerSliceImpl<details::SharedOwnershipLazy, ContainerSliceLazy<TInterfaces...>> {
 public:
-    using details::ContainerSliceImpl<details::SharedOwnershipLazy, TInterfaces...>::ContainerSliceImpl;
+    using details::ContainerSliceImpl<details::SharedOwnershipLazy, ContainerSliceLazy>::ContainerSliceImpl;
 
     explicit operator bool() const {
         return this->container.operator bool();
@@ -41,9 +42,9 @@ public:
 
 // subset of another type-erased DI container (weak ownership)
 template <typename... TInterfaces>
-class ContainerSliceWeak : private details::ContainerSliceImpl<details::WeakOwnership, TInterfaces...> {
+class ContainerSliceWeak : private details::ContainerSliceImpl<details::WeakOwnership, ContainerSliceWeak<TInterfaces...>> {
 public:
-    using details::ContainerSliceImpl<details::WeakOwnership, TInterfaces...>::ContainerSliceImpl;
+    using details::ContainerSliceImpl<details::WeakOwnership, ContainerSliceWeak>::ContainerSliceImpl;
 
     ContainerSlice<TInterfaces...> lock() const {
         return ContainerSlice<TInterfaces...>(*this);
@@ -53,9 +54,10 @@ public:
 
 // subset of another type-erased DI container (weak ownership, no automatic resolving upon the construction)
 template <typename... TInterfaces>
-class ContainerSliceWeakLazy : private details::ContainerSliceImpl<details::WeakOwnershipLazy, TInterfaces...> {
+class ContainerSliceWeakLazy
+    : private details::ContainerSliceImpl<details::WeakOwnershipLazy, ContainerSliceWeakLazy<TInterfaces...>> {
 public:
-    using details::ContainerSliceImpl<details::WeakOwnershipLazy, TInterfaces...>::ContainerSliceImpl;
+    using details::ContainerSliceImpl<details::WeakOwnershipLazy, ContainerSliceWeakLazy>::ContainerSliceImpl;
 
     ContainerSliceLazy<TInterfaces...> lock() const {
         return ContainerSliceLazy<TInterfaces...>(*this);

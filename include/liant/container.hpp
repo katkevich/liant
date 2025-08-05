@@ -13,6 +13,11 @@
 #include <vector>
 #endif
 
+namespace liant::details {
+template <typename UTraits, typename USelf>
+class ContainerSliceImpl;
+}
+
 // clang-format off
 LIANT_EXPORT
 // clang-format on
@@ -166,10 +171,6 @@ public:
 template <typename TBaseContainer, typename... TTypeMappings>
 class Container : public ContainerBase {
     using DestroyItemFn = void (*)(Container&);
-
-    template <typename UBaseContainer, typename... UTypeMappings>
-    friend class Container;
-
     using AllInterfaces = TypeListMergeT<typename TTypeMappings::Interfaces...>;
 
     static constexpr auto DuplicateIndex = AllInterfaces::findDuplicate();
@@ -185,7 +186,7 @@ public:
         , baseContainer(std::move(baseContainer)) {
         deleters.reserve(sizeof...(TTypeMappings));
     }
-    ~Container() {
+    virtual ~Container() override {
         // destroy items in the order opposite to the creation order
         for (auto i = deleters.size(); i > 0; --i) {
             deleters[i - 1](*this);
@@ -195,14 +196,14 @@ public:
     // trying to find already created instance registered 'as TInterface'
     // the unsafe raw pointer is being returned here so make sure it doesn't outlive the 'Container' itself
     template <typename TInterface>
-    TInterface* findRaw() const {
+    [[nodiscard]] TInterface* findRaw() const {
         return findInternal<TInterface>();
     }
 
     // trying to find already created instance registered 'as TInterface'
     // returned fat 'SharedRef' protects 'Container' from being destroyed so use 'SharedRef' with caution (you don't really want block 'Container' deletion)
     template <typename TInterface>
-    SharedPtr<TInterface> find() const {
+    [[nodiscard]] SharedPtr<TInterface> find() const {
         return SharedPtr<TInterface>(findInternal<TInterface>(), Container::shared_from_this());
     }
 
@@ -239,7 +240,7 @@ public:
     // - or registered type should be only constructible from 'ContainerSlice<...>' / 'ContainerView<...>'
     // - or you should provide ctor arguments while calling 'Container::resolve<...>'
     // - or you should provide ctor arguments bindings while configuring DI mappings (bindArgs(...))
-    virtual void resolveAll() final {
+    virtual void resolveAll() override {
         baseContainer->resolveAll();
 
         liant::tuple::forEach(items, [&]<typename TTypeMapping>(RegisteredItem<TTypeMapping>&) {

@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.30)
 # your CMake build for the exact value to use.
 set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "d0edc3af-4c50-42ea-a356-e2862fe7a444")
 
-project(liant VERSION 1.0.0)
+project(liant VERSION 0.9.0)
 
 #
 # Common compiler options for liant/liant_module/liant_module_nostd targets
@@ -37,7 +37,9 @@ set(LIANT_HEADERS
     include/liant/details/container_slice_settings.hpp
     include/liant/details/container_slice_vtable.hpp
     include/liant/details/container_ptr.hpp
+    include/liant/details/dynamic_array.hpp
     include/liant/container_view.hpp
+    include/liant/factory.hpp
     include/liant/ptr.hpp
     include/liant/tuple.hpp
     include/liant/typelist.hpp
@@ -130,10 +132,10 @@ option(LIANT_BUILD_EXAMPLES "Build Liant examples" OFF)
 #
 # Tests
 #
-if (LIANT_BUILD_TESTS)
+#if (LIANT_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests EXCLUDE_FROM_ALL)
-endif()
+#endif()
 
 #
 # Examples

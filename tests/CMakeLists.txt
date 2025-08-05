@@ -20,6 +20,12 @@ add_executable(test_liant
     src/container_slice_lazy_ctor.cpp
 )
 
+# target_compile_options(test_liant INTERFACE
+#     $<$<CXX_COMPILER_ID:Clang,AppleClang,GNU>: --coverage>
+# )
+# target_link_options(test_liant INTERFACE
+#     $<$<CXX_COMPILER_ID:Clang,AppleClang,GNU>: --coverage>
+# )
 target_link_libraries(test_liant liant::liant doctest::doctest_with_main)
 target_compile_definitions(test_liant PUBLIC
     DOCTEST_CONFIG_VOID_CAST_EXPRESSIONS

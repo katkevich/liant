@@ -233,7 +233,8 @@ TEST_CASE("ensure ContainerSlice assign to itself ain't broken") {
     liant::ContainerSlice<S1, S2, S3> slice(container);
     REQUIRE_EQ(container.use_count(), 2);
 
-    slice = slice;
+    auto& other = slice;
+    slice = other;
     REQUIRE_EQ(container.use_count(), 2);
 
     REQUIRE_EQ(container->find<S1>()->i, 1);
